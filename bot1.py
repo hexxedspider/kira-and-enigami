@@ -120,6 +120,7 @@ async def help(ctx):
     embed3.add_field(name=".gamble", value="50 percent change of either winning or losing, add the amount you'd like to bet after typing .gamble.", inline=True)
     embed3.add_field(name=".daily", value="Gives a daily bonus of 100.", inline=True)
     embed3.add_field(name=".say", value="Forces the bot to say your message in the same channel, and it deletes your original message.", inline=True)
+    embed3.add_field(name=".github", value="Sends a link to the bot's github (all three are in the repo').", inline=True)
 
     embed4 = discord.Embed(
         title="Help Page 4",
@@ -223,12 +224,16 @@ async def on_message(message):
         greetings = [
             "wsp?", "wsp", "hey", "helloo", "hi", "yo", "LEAVE ME ALONE", "SHUT THE FUCK UP", "don't bother me",
             "what you trynna get into?", "leave me alone", "yea mane?", "don't speak my name",
-            "you sound better when you're not talking", "please be quiet",
-            "just came back from coolville, they ain't know you",
-            "just came back from coolville, they said you're the mayor",
-            "hold on im shoving jelly beans up my ass",
+            "you sound better when you're not talking", "please be quiet", "god you sound obnoxious", "yes honey?", "yes my darling?",
+            "dont take my compliments to heart, im forced to say it.",
+            "just came back from coolville, they ain't know you", "want to go down the slide with me?", "want to go on the swings? the playground's empty.",
+            "just came back from coolville, they said you're the mayor", "lowkey dont know what im doing give me a sec", ".help is NOT my name, try again",
+            "hold on im shoving jelly beans up my ass", "cant talk, im at the doctors, but tell me why they said i need to stop letting people finish in me ??"
             "cant talk rn, to make a long story short, im being chased for putting barbeque sauce on random people",
-            "im at the dentist rn but they said i need to stop doing oral ??"
+            "im at the dentist rn but they said i need to stop doing oral ??", "the aliens are coming, hide", "im coming, hide", "how the fuck does this thing work?"
+            "i cnat fiind my glases, 1 sec", "i difnt fnid my glasess", "holy fuck shut up", "do you ever be quiet?", "will you die if you stop talking?", "yeah?", "what?",
+            "i felt lonely for a long time, but then i bought a jetski", "Kirabiter, coming to a server near you soon!", "this is a secret!", "use .nsfw for a secret :P",
+            "ay im at the chiropracters rn, but she told me i have to stop taking backshots, give me a sec",
         ]
         await message.reply(random.choice(greetings))
 
@@ -237,8 +242,8 @@ async def on_message(message):
 @bot.command()
 async def eightball(ctx, *, question: str):
     responses = [
-        "Yes", "No", "Maybe", "Definitely", "Absolutely not", 
-        "Ask again later", "Probably", "Unlikely", "idk gang"
+        "Yes", "No", "maybe ?", "Definitely", "Absolutely not, even a cracked out person would agree with me", 
+        "Ask again later, I'm jacking it.", "Yeah, probably", "Unlikely", "idk gang"
     ]
     await ctx.send(f"🎱 Question: {question}\nAnswer: {random.choice(responses)}")
 
@@ -634,7 +639,7 @@ def set_balance(user_id, new_balance):
 async def balance(ctx):
     user_id = str(ctx.author.id)
     balance = get_balance(user_id)
-    await ctx.send(f"{ctx.author.mention}, your balance is 💰 {balance} coins.")
+    await ctx.send(f"{ctx.author.mention}, your balance is {balance} coins.")
 
 @bot.command()
 async def gamble(ctx, amount: int):
@@ -699,7 +704,10 @@ async def daily(ctx):
 async def github(ctx):
     """Sends the GitHub repo link for the bot."""
     await ctx.send("Check out the bot's GitHub [here](https://github.com/hexxedspider/kira-and-enigami)")
-
+@bot.command()
+async def nsfw(ctx):
+    """"Sends a secret message when the user types .nsfw."""
+    await ctx.send("youre a fucking loser. you typed .nsfw, you know that right? you did this willingly. you could have just typed .help, but no, you had to type .nsfw. you know what? im not even mad, im just disappointed. you could have been a good person, but instead you chose to be a fucking loser. i hope youre happy with yourself. you know what? im not even going to delete this message, because you deserve to see it. you deserve to see how much of a fucking loser you are. i hope you feel ashamed of yourself. i hope you never type .nsfw again. i hope you never come back to this server. i hope you leave and never come back.")
 
 # runs the bot with the token from the .env file
 bot.run(BOT1)

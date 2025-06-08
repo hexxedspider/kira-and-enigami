@@ -94,7 +94,7 @@ async def help(ctx):
     )
     embed1.add_field(name=".die", value="Roll a 6 sided die.", inline=True)
     embed1.add_field(name=".cf", value="Flip a coin.", inline=True)
-    embed1.add_field(name=".eightball", value="Ask the Eightball a question!", inline=True)
+    embed1.add_field(name=".eightball", value="Ask the Eightball a question.", inline=True)
     embed1.add_field(name=".sava", value="Grabs the server's icon/avatar.", inline=True)
     embed1.add_field(name=".define", value="Get the definition of a term from Urban Dictionary.", inline=True)
     embed1.add_field(name=".ava", value="Grab the icon/avatar of a user (mention person).", inline=True)
@@ -694,6 +694,12 @@ async def daily(ctx):
     db.update({"last_claim": now.isoformat()}, User.id == user_id)
 
     await ctx.send(f"{ctx.author.mention}, you received your daily bonus of {bonus_amount} coins. Your new balance is {new_balance}.")
+
+@bot.command()
+async def github(ctx):
+    """Sends the GitHub repo link for the bot."""
+    await ctx.send("Check out the bot's GitHub [here](https://github.com/hexxedspider/kira-and-enigami)")
+
 
 # runs the bot with the token from the .env file
 bot.run(BOT1)

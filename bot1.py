@@ -998,7 +998,7 @@ async def cfstats(ctx, member: discord.Member = None):
 @commands.has_permissions(administrator=True)
 async def adminpanel(ctx):
     """Sends admin commands only if used in the admin channel."""
-    admin_channel_id = 123456789012345678  # Replace with your admin channel ID
+    admin_channel_id = 1380720256456200202  # Replace with your admin channel ID
 
     if ctx.channel.id != admin_channel_id:
         await ctx.send(f"Please use this command in <#{admin_channel_id}>.")

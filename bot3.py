@@ -246,32 +246,5 @@ async def r34_logic(ctx_or_msg, tags: str):
 
         await channel.send("No posts found for those tags.")
 
-# on_message event for "enigami r34 " prefix, optionally start repeat there too
-@bot.event
-async def on_message(message):
-    if message.author.bot:
-        return
-
-    prefix = "enigami r34 "
-    if message.content.lower().startswith(prefix):
-        tags_with_interval = message.content[len(prefix):].strip().split()
-        interval = 10
-        if tags_with_interval and tags_with_interval[-1].isdigit():
-            interval = int(tags_with_interval[-1])
-            tags = tags_with_interval[:-1]
-        else:
-            tags = tags_with_interval
-
-        if tags:
-            # Cancel existing loop in the channel first
-            if message.channel.id in r34_loops:
-                r34_loops[message.channel.id].cancel()
-
-            task = bot.loop.create_task(r34_repeating_task(message, " ".join(tags), interval))
-            r34_loops[message.channel.id] = task
-            await message.channel.send(f"Started repeating Rule34 posts for tags: `{ ' '.join(tags) }` every {interval} seconds.")
-
-    await bot.process_commands(message)
-
 # run the bot
 bot.run(BOT3)

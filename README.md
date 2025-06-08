@@ -1,74 +1,17 @@
-### KIRABITER
+### KIRABITER (bot1)
 
-Kirabiter is a bot I made for simply wanting to make one, but it slowly grew and now I'm adding more and more to it.
+uses a period (.) for commands.
 
-Current commands for Kirabiter are:
+Kirabiter is a bot I made for simply wanting to make one, but it slowly grew and now I'm adding more and more to it. I've added several commands, see either in .help or code. .help hides a command(s), which is .adminpanel.
 
+### ENIGAMI (bot2)
 
-.die - Roll a 6 sided die.
+uses a exclamation point (!) for commands.
 
+enigami is a bot I made, which I jokingly used [r34](rule34.xxx) API as a test, but it ended up as a wanted command, so I made this as a NSFW bot, instead of having it in the main bot.
 
-.cf - Flip a coin.
+### enikami - enigami extended (bot3)
 
+uses a dollar sign ($) for commands.
 
-.eightball - Ask the Eightball a question.
-
-
-.ava - Grab the icon/avatar of a user (mention person).
-
-
-.sava - Grabs the server's icon/avatar.
-
-
-.define - Get the definition of a term from Urban Dictionary.
-
----
-
-.userinfo - Get info about a user, only works in guilds/servers.
-
-
-.serverinfo - Get info about the server
-
-
-.uinfcmd - This will send an embed with what 'userinfo' will return.
-Username and Discriminator
-ID
-Top Role
-Joined server and discord
-
-
-.dminfo - Returns a message with the info of your user, but tweaked to work in DMs.
-
-
-.rps - Play rock paper scissors against the bot, also pairs with .rpsstats.
-
-
-.red - Fetches media from a subreddit. Example: .red aww image/gif - .red [nsfw subreddit] image/gif true. Only works in age-restricted channels, or DMs. 
-
----
-
-.balance - Shows you the current amount of currency you have.
-
-
-.gamble - 50 percent change of either winning or losing, add the amount you'd like to bet after typing .gamble.
-
-
-.daily - Gives a daily bonus of 100.
-
-
-.say - Forces the bot to say your message in the same channel, and it deletes your original message.
-
----
-
-### Listen commands
-
-"peak" - Replies to your message with "peak"
-
-
-"real" - Replies to your message with "real"
-
-
-"kirabiter" - Replies to your message with a random greeting.
-
-
-"...end it..." - Replies to a message that has "end it" anywhere in it with a random message, confirming you should.
+enikami is another NSFW bot, but this time with timer support.

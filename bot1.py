@@ -27,7 +27,7 @@ if os.path.exists(folder_name) and not os.path.isdir(folder_name):
 os.makedirs(folder_name, exist_ok=True)
 
 # ✅ Setup TinyDB
-db = TinyDB(f"{folder_name}/balances.json")
+db = TinyDB(f"{folder_name}/db.json")
 User = Query()
 
 # ✅ Load environment variables
@@ -47,6 +47,27 @@ intents.message_content = True  # Required to read message content
 
 # prefix, just like / but not.
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
+
+BALANCE_FILE = os.path.join("gambling", "db.json")
+
+# Load balances
+try:
+    with open(BALANCE_FILE, "r") as f:
+        balances = json.load(f)
+except FileNotFoundError:
+    balances = {}
+
+def get_balance(user_id: int) -> int:
+    return balances.get(str(user_id), 100)  # default start with 100 coins
+
+def update_balance(user_id: int, amount: int) -> None:
+    user_key = str(user_id)
+    current = balances.get(user_key, 100)
+    new_balance = max(current + amount, 0)
+    balances[user_key] = new_balance
+    with open(BALANCE_FILE, "w") as f:
+        json.dump(balances, f, indent=4)
+
 
 @bot.event
 async def on_ready():
@@ -124,7 +145,7 @@ async def help(ctx):
     embed3.add_field(name=".serverinfo", value="Get info about the server.", inline=True)
     embed3.add_field(name=".uinfcmd", value="This will send an embed with what 'userinfo' will return.", inline=True)
     embed3.add_field(name=".dminfo", value="Returns a message with the info of your user, but tweaked to work in DMs.", inline=True)
-    embed3.add_field(name=".rps", value="Play rock paper scissors against the bot, also pairs with .rpsstats.", inline=True)
+    embed3.add_field(name=".rps", value="Play rock paper scissors against the bot, also pairs with .rpsstats. Rewards coins.", inline=True)
     embed3.add_field(name=".red", value="Fetches media from a subreddit. Example: .red aww image/gif - .red [nsfw subreddit] image/gif true.", inline=True)
 
     embed4 = discord.Embed(
@@ -424,7 +445,10 @@ async def sava(ctx, *, user: discord.User = None):
 
     await ctx.send(embed=embed)
 
-# Dictionary to store RPS stats
+db = TinyDB('db.json')
+balances_table = db.table('balances')
+User = Query()
+
 rps_stats = defaultdict(lambda: {"wins": 0, "losses": 0, "ties": 0})
 
 @bot.command()
@@ -435,48 +459,57 @@ async def rps(ctx):
             self.user = user
 
         async def interaction_check(self, interaction: discord.Interaction) -> bool:
-            # Only allow the user who started the game to interact
             if interaction.user != self.user:
                 await interaction.response.send_message("This is not your game!", ephemeral=True)
                 return False
             return True
 
         @discord.ui.button(label="Rock 🪨", style=ButtonStyle.primary)
-        async def rock(self, interaction: discord.Interaction, button: Button):
+        async def rock(self, interaction: discord.Interaction, button):
             await play_game(interaction, "rock", self.user)
 
         @discord.ui.button(label="Paper 📄", style=ButtonStyle.success)
-        async def paper(self, interaction: discord.Interaction, button: Button):
+        async def paper(self, interaction: discord.Interaction, button):
             await play_game(interaction, "paper", self.user)
 
         @discord.ui.button(label="Scissors ✂️", style=ButtonStyle.danger)
-        async def scissors(self, interaction: discord.Interaction, button: Button):
+        async def scissors(self, interaction: discord.Interaction, button):
             await play_game(interaction, "scissors", self.user)
 
     async def play_game(interaction, user_choice, user):
         choices = ["rock", "paper", "scissors"]
         bot_choice = random.choice(choices)
 
-        # Determine outcome
+        WIN_REWARD = 50
+        LOSS_PENALTY = 25
+        TIE_REWARD = 25
+
         if user_choice == bot_choice:
             outcome = "It's a tie!"
             rps_stats[user.id]["ties"] += 1
+            update_balance(user.id, TIE_REWARD)
+            coin_change = TIE_REWARD
         elif (
             (user_choice == "rock" and bot_choice == "scissors") or
             (user_choice == "paper" and bot_choice == "rock") or
             (user_choice == "scissors" and bot_choice == "paper")
         ):
-            outcome = "hacker, ofc you won"
+            outcome = "You won! 🎉"
             rps_stats[user.id]["wins"] += 1
+            update_balance(user.id, WIN_REWARD)
+            coin_change = WIN_REWARD
         else:
-            outcome = "you fucing suck man, I win!"
+            outcome = "I win! Better luck next time."
             rps_stats[user.id]["losses"] += 1
+            update_balance(user.id, -LOSS_PENALTY)
+            coin_change = -LOSS_PENALTY
 
         stats = rps_stats[user.id]
         stats_msg = f"Wins: {stats['wins']}, Losses: {stats['losses']}, Ties: {stats['ties']}"
+        coin_msg = f"You {'gained' if coin_change > 0 else 'lost'} {abs(coin_change)} coins."
 
         await interaction.response.edit_message(
-            content=f"You chose **{user_choice}**.\nI chose **{bot_choice}**.\n\n{outcome}\n\n📊 **Your RPS Stats:** {stats_msg}",
+            content=f"You chose **{user_choice}**.\nI chose **{bot_choice}**.\n\n{outcome}\n\n{coin_msg}\n\n📊 **Your RPS Stats:** {stats_msg}",
             view=None
         )
 

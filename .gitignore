@@ -1,3 +1,2 @@
 .env
-gambled
-balances.json
+db.json

@@ -508,9 +508,9 @@ async def rpsstats(ctx, member: discord.Member = None):
 async def kick(ctx, member: discord.Member, *, reason=None):
     try:
         await member.kick(reason=reason)
-        await ctx.send(f"👢 {member.display_name} has been kicked. Reason: {reason or 'No reason provided'}")
+        await ctx.send(f"{member.display_name} has been kicked. Reason: {reason or 'No reason provided'}")
     except Exception as e:
-        await ctx.send(f"❌ Failed to kick {member.display_name}. Error: {e}")
+        await ctx.send(f"Failed to kick {member.display_name}. Error: {e}")
 
 # Ban command
 @bot.command()
@@ -518,9 +518,9 @@ async def kick(ctx, member: discord.Member, *, reason=None):
 async def ban(ctx, member: discord.Member, *, reason=None):
     try:
         await member.ban(reason=reason)
-        await ctx.send(f"🔨 {member.display_name} has been banned. Reason: {reason or 'No reason provided'}")
+        await ctx.send(f"{member.display_name} has been banned. Reason: {reason or 'No reason provided'}")
     except Exception as e:
-        await ctx.send(f"❌ Failed to ban {member.display_name}. Error: {e}")
+        await ctx.send(f"Failed to ban {member.display_name}. Error: {e}")
 
 # Unban command
 @bot.command()
@@ -534,12 +534,12 @@ async def unban(ctx, *, member_name):
         if user.name.lower() == member_name or f"{user.name.lower()}#{user.discriminator}" == member_name:
             try:
                 await ctx.guild.unban(user)
-                await ctx.send(f"✅ Unbanned {user.name}#{user.discriminator}")
+                await ctx.send(f"Unbanned {user.name}#{user.discriminator}")
                 return
             except Exception as e:
-                await ctx.send(f"❌ Could not unban {user.name}. Error: {e}")
+                await ctx.send(f"Could not unban {user.name}. Error: {e}")
                 return
-    await ctx.send(f"❌ User '{member_name}' not found in banned list.")
+    await ctx.send(f"User '{member_name}' not found in banned list.")
 
 # Mute command
 @bot.command()
@@ -547,18 +547,18 @@ async def unban(ctx, *, member_name):
 async def mute(ctx, member: discord.Member, *, reason=None):
     muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
     if not muted_role:
-        await ctx.send("⚠️ 'Muted' role not found! Please create one and set its permissions properly.")
+        await ctx.send("'Muted' role not found! Please create one and set its permissions properly.")
         return
 
     if muted_role in member.roles:
-        await ctx.send(f"ℹ️ {member.display_name} is already muted.")
+        await ctx.send(f"{member.display_name} is already muted.")
         return
 
     try:
         await member.add_roles(muted_role, reason=reason)
-        await ctx.send(f"🔇 {member.display_name} has been muted. Reason: {reason or 'No reason provided'}")
+        await ctx.send(f"{member.display_name} has been muted. Reason: {reason or 'No reason provided'}")
     except Exception as e:
-        await ctx.send(f"❌ Failed to mute {member.display_name}. Error: {e}")
+        await ctx.send(f"Failed to mute {member.display_name}. Error: {e}")
 
 # Unmute command
 @bot.command()
@@ -566,37 +566,37 @@ async def mute(ctx, member: discord.Member, *, reason=None):
 async def unmute(ctx, member: discord.Member):
     muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
     if not muted_role:
-        await ctx.send("⚠️ 'Muted' role not found! Please create one and set its permissions properly.")
+        await ctx.send("'Muted' role not found! Please create one and set its permissions properly.")
         return
 
     if muted_role not in member.roles:
-        await ctx.send(f"ℹ️ {member.display_name} is not muted.")
+        await ctx.send(f"{member.display_name} is not muted.")
         return
 
     try:
         await member.remove_roles(muted_role)
-        await ctx.send(f"🔊 {member.display_name} has been unmuted.")
+        await ctx.send(f"{member.display_name} has been unmuted.")
     except Exception as e:
-        await ctx.send(f"❌ Failed to unmute {member.display_name}. Error: {e}")
+        await ctx.send(f"Failed to unmute {member.display_name}. Error: {e}")
 
 # Clear command (bulk delete messages)
 @bot.command()
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx, amount: int):
     if amount <= 0:
-        await ctx.send("❌ Please specify a positive number of messages to delete.")
+        await ctx.send("Please specify a positive number of messages to delete.")
         return
 
     try:
         deleted = await ctx.channel.purge(limit=amount + 1)  # +1 to delete the command message too
-        await ctx.send(f"🧹 Deleted {len(deleted)-1} messages.", delete_after=5)
+        await ctx.send(f"Deleted {len(deleted)-1} messages.", delete_after=5)
     except Exception as e:
-        await ctx.send(f"❌ Failed to delete messages. Error: {e}")
+        await ctx.send(f"Failed to delete messages. Error: {e}")
 
 @bot.command()
 async def cleardm(ctx, amount: int = 5):
     if ctx.guild is not None:
-        await ctx.send("❌ This command is for DMs only.")
+        await ctx.send("This command is for DMs only.")
         return
 
     deleted_count = 0
@@ -606,7 +606,7 @@ async def cleardm(ctx, amount: int = 5):
             deleted_count += 1
             if deleted_count >= amount:
                 break
-    await ctx.send(f"🧹 Deleted {deleted_count} messages I sent in this DM.", delete_after=5)
+    await ctx.send(f"Deleted {deleted_count} messages I sent in this DM.", delete_after=5)
 
 @bot.command()
 async def say(ctx, *, message):
@@ -620,9 +620,9 @@ async def giverole(ctx, member: discord.Member, *, role_name: str):
     role = discord.utils.get(ctx.guild.roles, name=role_name)
     if role:
         await member.add_roles(role)
-        await ctx.send(f"✅ {role.name} given to {member.mention}.")
+        await ctx.send(f"{role.name} given to {member.mention}.")
     else:
-        await ctx.send(f"❌ Role '{role_name}' not found.")
+        await ctx.send(f"Role '{role_name}' not found.")
 
 user_balances = {}  # In-memory storage of user balances (use a database for persistence)
 

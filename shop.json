@@ -1,0 +1,8 @@
+{
+    "vip": {"price": 1000, "role_name": "VIP", "sellable": true},
+    "elite": {"price": 2500, "role_name": "Elite", "sellable": true},
+    "god": {"price": 5000, "role_name": "God", "sellable": true},
+    "immortal": {"price": 10000, "role_name": "Immortal", "sellable": true},
+    "true one": {"price": 25000, "role_name": "True One", "sellable": true},
+    "gambler": {"price": 50000, "role_name": "Gambler", "sellable": true}
+}

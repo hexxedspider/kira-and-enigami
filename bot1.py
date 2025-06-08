@@ -11,6 +11,7 @@ from collections import defaultdict
 import re
 from tinydb import TinyDB, Query
 import datetime
+import json
 
 # 🔧 Force working directory to script's folder
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -92,47 +93,72 @@ async def help(ctx):
         description="Fun & Info Commands",
         color=discord.Color.blurple()
     )
-    embed1.add_field(name=".die", value="Roll a 6 sided die.", inline=True)
-    embed1.add_field(name=".cf", value="Flip a coin.", inline=True)
-    embed1.add_field(name=".eightball", value="Ask the Eightball a question.", inline=True)
-    embed1.add_field(name=".sava", value="Grabs the server's icon/avatar.", inline=True)
-    embed1.add_field(name=".define", value="Get the definition of a term from Urban Dictionary.", inline=True)
-    embed1.add_field(name=".ava", value="Grab the icon/avatar of a user (mention person).", inline=True)
+    embed1 = discord.Embed(
+    title="Help Page 1",
+    description="Reply Commands - Replies to 'example' whenever it's messaged.",
+    color=discord.Color.blurple()
+)
+    embed1.add_field(name="'peak'", value="peak", inline=True)
+    embed1.add_field(name="'real'", value="real", inline=True)
+    embed1.add_field(name="'kirabiter'", value="Replies with a random greeting to the mention of it's name.", inline=True)
+    embed1.add_field(name="'...end it...'", value="Replies with a random sentence encouraging you.", inline=True)
 
     embed2 = discord.Embed(
-        title="Help Page 2",
-        description="Fun & Info Commands",
-        color=discord.Color.blurple()
-    )#Fetches media from a subreddit. Example: .red aww image/gif - .red [nsfw subreddit] image/gif true.
-    embed2.add_field(name=".userinfo", value="Get info about a user.", inline=True)
-    embed2.add_field(name=".serverinfo", value="Get info about the server.", inline=True)
-    embed2.add_field(name=".uinfcmd", value="This will send an embed with what 'userinfo' will return.", inline=True)
-    embed2.add_field(name=".dminfo", value="Returns a message with the info of your user, but tweaked to work in DMs.", inline=True)
-    embed2.add_field(name=".rps", value="Play rock paper scissors against the bot, also pairs with .rpsstats.", inline=True)
-    embed2.add_field(name=".red", value="Fetches media from a subreddit. Example: .red aww image/gif - .red [nsfw subreddit] image/gif true.", inline=True)
+    title="Help Page 2",
+    description="Basic Commands",
+    color=discord.Color.blurple()
+)
+    embed2.add_field(name=".die", value="Roll a 6 sided die.", inline=True)
+    embed2.add_field(name=".cf", value="Flip a coin.", inline=True)
+    embed2.add_field(name=".eightball", value="Ask the Eightball a question.", inline=True)
+    embed2.add_field(name=".sava", value="Grabs the server's icon/avatar.", inline=True)
+    embed2.add_field(name=".define", value="Get the definition of a term from Urban Dictionary.", inline=True)
+    embed2.add_field(name=".ava", value="Grab the icon/avatar of a user (mention person).", inline=True)
 
     embed3 = discord.Embed(
-        title="Help Page 3",
-        description="Reply Commands - Replies to 'example' whenever it's messaged.",
-        color=discord.Color.blurple()
-    )
-    embed3.add_field(name=".balance", value="Shows you the current amount of currency you have.", inline=True)
-    embed3.add_field(name=".gamble", value="50 percent change of either winning or losing, add the amount you'd like to bet after typing .gamble.", inline=True)
-    embed3.add_field(name=".daily", value="Gives a daily bonus of 100.", inline=True)
-    embed3.add_field(name=".say", value="Forces the bot to say your message in the same channel, and it deletes your original message.", inline=True)
-    embed3.add_field(name=".github", value="Sends a link to the bot's github (all three are in the repo').", inline=True)
+    title="Help Page 3",
+    description="Fun & Info Commands",
+    color=discord.Color.blurple()
+)
+    embed3.add_field(name=".userinfo", value="Get info about a user.", inline=True)
+    embed3.add_field(name=".serverinfo", value="Get info about the server.", inline=True)
+    embed3.add_field(name=".uinfcmd", value="This will send an embed with what 'userinfo' will return.", inline=True)
+    embed3.add_field(name=".dminfo", value="Returns a message with the info of your user, but tweaked to work in DMs.", inline=True)
+    embed3.add_field(name=".rps", value="Play rock paper scissors against the bot, also pairs with .rpsstats.", inline=True)
+    embed3.add_field(name=".red", value="Fetches media from a subreddit. Example: .red aww image/gif - .red [nsfw subreddit] image/gif true.", inline=True)
 
     embed4 = discord.Embed(
-        title="Help Page 4",
-        description="Reply Commands - Replies to 'example' whenever it's messaged.",
-        color=discord.Color.blurple()
-    )
-    embed4.add_field(name="'peak'", value="peak", inline=True)
-    embed4.add_field(name="'real'", value="real", inline=True)
-    embed4.add_field(name="'kirabiter'", value="Replies with a random greeting to the mention of it's name.", inline=True)
-    embed4.add_field(name="'...end it...'", value="Replies with a random sentence encouraging you.", inline=True)
+    title="Help Page 4",
+    description="Fun & Info Commands",
+    color=discord.Color.blurple()
+)
+    embed4.add_field(name=".balance", value="Shows you the current amount of currency you have.", inline=True)
+    embed4.add_field(name=".gamble", value="50 percent chance of either winning or losing, add the amount you'd like to bet after typing .gamble.", inline=True)
+    embed4.add_field(name=".daily", value="Gives a daily bonus of 100.", inline=True)
+    embed4.add_field(name=".say", value="Forces the bot to say your message in the same channel, and it deletes your original message.", inline=True)
+    embed4.add_field(name=".github", value="Sends a link to the bot's github (all three are in the repo').", inline=True)
+
+    embed5 = discord.Embed(
+    title="Help Page 5",
+    description="Fun & Info Commands",
+    color=discord.Color.blurple()
+)
+    embed5.add_field(name=".shop", value="Sends an embed with the current shop.", inline=True)
+    embed5.add_field(name=".buy", value="Buy something from the shop.", inline=True)
+    embed5.add_field(name=".inventory", value="Shows off your inventory of tags.", inline=True)
+    embed5.add_field(name=".sell", value="Sells an item you have.", inline=True)
+    embed5.add_field(name=".cfmilestones", value="Shows milestones of coinflips and the attached roles.", inline=True)
+    embed5.add_field(name=".cfstats", value="Shows your coinflip stats.", inline=True)
+
+    embed6 = discord.Embed(
+    title="Help Page 6",
+    description="Fun & Info Commands",
+    color=discord.Color.blurple()
+)
+    embed6.add_field(name=".bet", value="Starts a coinflip challenge for a specified amount of coins.", inline=True)
+    embed6.add_field(name=".acceptbet", value="Accepts a coinflip challenge from another user.", inline=True)
     # Create the view with embeds
-    view = HelpView([embed1, embed2, embed3, embed4])
+    view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6])
     await ctx.send(embed=embed1, view=view)
 
 @bot.command()
@@ -582,27 +608,6 @@ async def cleardm(ctx, amount: int = 5):
                 break
     await ctx.send(f"🧹 Deleted {deleted_count} messages I sent in this DM.", delete_after=5)
 
-
-@bot.command(name="adminhelp")
-@commands.has_permissions(administrator=True)  # Only admins can run this
-async def adminhelp(ctx):
-    admin_commands_list = """
-    **Admin / Moderation Commands:**
-
-    - `!kick @user [reason]` — Kick a user from the server.
-    - `!ban @user [reason]` — Ban a user from the server.
-    - `!unban username#1234` — Unban a user by their name and discriminator.
-    - `!mute @user [reason]` — Mute a user by adding the Muted role.
-    - `!unmute @user` — Remove the Muted role from a user.
-    - `!clear <number>` — Bulk delete messages in the current channel.
-    """
-
-    try:
-        await ctx.author.send(admin_commands_list)
-        await ctx.message.delete()  # Optionally delete the command message to keep it secret
-    except discord.Forbidden:
-        await ctx.send(f"{ctx.author.mention}, I couldn't send you a DM. Please check your privacy settings.")
-
 @bot.command()
 async def say(ctx, *, message):
     """Repeats the user's message."""
@@ -633,7 +638,6 @@ def set_balance(user_id, new_balance):
         db.update({"balance": new_balance}, User.id == user_id)
     else:
         db.insert({"id": user_id, "balance": new_balance})
-
 
 @bot.command()
 async def balance(ctx):
@@ -707,7 +711,312 @@ async def github(ctx):
 @bot.command()
 async def nsfw(ctx):
     """"Sends a secret message when the user types .nsfw."""
-    await ctx.send("youre a fucking loser. you typed .nsfw, you know that right? you did this willingly. you could have just typed .help, but no, you had to type .nsfw. you know what? im not even mad, im just disappointed. you could have been a good person, but instead you chose to be a fucking loser. i hope youre happy with yourself. you know what? im not even going to delete this message, because you deserve to see it. you deserve to see how much of a fucking loser you are. i hope you feel ashamed of yourself. i hope you never type .nsfw again. i hope you never come back to this server. i hope you leave and never come back.")
+    await ctx.send("youre a fucking loser. you typed .nsfw, you know that right? you did this willingly. you could have just typed .help, but no, you had to type .nsfw. you know what? im not even mad, im just disappointed. you could have been a good person, but instead you chose to be a fucking loser. i hope youre happy with yourself. you know what? im not even going to delete this message, because you deserve to see it. you deserve to see how much of a fucking loser you are. i hope you feel ashamed of yourself. i hope you never type .nsfw again. i hope you never come back to this server. i hope you leave and never come back. fuck you.")
+
+pending_coinflips = {}  # Stores challenges as {challenger_id: {"amount": int}}
+
+def get_balance(user_id):
+    result = db.get(User.id == user_id)
+    if result is None:
+        db.insert({"id": user_id, "balance": 100})
+        return 100
+    return result["balance"]
+
+def set_balance(user_id, new_balance):
+    if db.contains(User.id == user_id):
+        db.update({"balance": new_balance}, User.id == user_id)
+    else:
+        db.insert({"id": user_id, "balance": new_balance})
+
+# User starts a coinflip challenge
+@bot.command()
+async def bet(ctx, amount: int):
+    user_id = str(ctx.author.id)
+
+    if user_id in pending_coinflips:
+        await ctx.send("You already have a pending coinflip.")
+        return
+
+    if amount <= 0:
+        await ctx.send("Invalid amount.")
+        return
+
+    balance = get_balance(user_id)
+    if amount > balance:
+        await ctx.send("You don't have enough coins.")
+        return
+
+    pending_coinflips[user_id] = {"amount": amount}
+    await ctx.send(f"{ctx.author.mention} has started a coinflip for {amount} coins! Type `.acceptbet @{ctx.author.name}` to accept.")
+
+# Another user accepts the coinflip
+@bot.command()
+async def acceptbet(ctx, challenger: discord.Member):
+    challenger_id = str(challenger.id)
+    accepter_id = str(ctx.author.id)
+
+    if challenger_id not in pending_coinflips:
+        await ctx.send("That user has no pending coinflip.")
+        return
+
+    if challenger_id == accepter_id:
+        await ctx.send("You can't accept your own coinflip.")
+        return
+
+    amount = pending_coinflips[challenger_id]["amount"]
+
+    challenger_balance = get_balance(challenger_id)
+    accepter_balance = get_balance(accepter_id)
+
+    if accepter_balance < amount:
+        await ctx.send("You don't have enough coins to accept the coinflip.")
+        return
+    if challenger_balance < amount:
+        await ctx.send("The challenger no longer has enough coins.")
+        del pending_coinflips[challenger_id]
+        return
+
+    # Flip the coin
+    winner_id = random.choice([challenger_id, accepter_id])
+    loser_id = accepter_id if winner_id == challenger_id else challenger_id
+
+    set_balance(winner_id, get_balance(winner_id) + amount)
+    set_balance(loser_id, get_balance(loser_id) - amount)
+
+    del pending_coinflips[challenger_id]
+
+    winner = await bot.fetch_user(int(winner_id))
+    loser = await bot.fetch_user(int(loser_id))
+
+    # Update wins
+    new_wins = increment_cf_wins(str(winner.id))
+
+    # Check for milestone
+    if new_wins in milestone_roles:
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+        role_name = milestone_roles[new_wins]
+        if role and role not in winner.roles:
+            await winner.add_roles(role)
+            await ctx.send(f"🎉 {winner.mention} reached {new_wins} coinflip wins and earned the **{role_name}** role!")
+
+
+    await ctx.send(f"Coin flipped! {winner.mention} wins {amount} coins from {loser.mention}!")
+
+@bot.command()
+@commands.cooldown(1, 10, commands.BucketType.user)
+async def pay(ctx, member: discord.Member, amount: int):
+    sender_id = str(ctx.author.id)
+    receiver_id = str(member.id)
+
+    if sender_id == receiver_id:
+        await ctx.send("You can't pay yourself.")
+        return
+
+    if amount <= 0:
+        await ctx.send("Amount must be greater than 0.")
+        return
+
+    sender_balance = get_balance(sender_id)
+    receiver_balance = get_balance(receiver_id)
+
+    if sender_balance < amount:
+        await ctx.send("You don't have enough coins.")
+        return
+
+    # Perform the transaction
+    set_balance(sender_id, sender_balance - amount)
+    set_balance(receiver_id, receiver_balance + amount)
+
+    await ctx.send(f"{ctx.author.mention} paid {member.mention} {amount} coins.")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def reloadshop(ctx):
+    global shop_items
+    with open("shop.json", "r") as f:
+        shop_items = json.load(f)
+    await ctx.send("Shop items reloaded from file.")
+
+
+@bot.command()
+async def shop(ctx):
+    embed = discord.Embed(title="Shop", color=discord.Color.gold())
+    for item_name, data in shop_items.items():
+        embed.add_field(name=item_name.capitalize(), value=f"{data['price']} coins\nRole: {data['role_name']}", inline=True)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def buy(ctx, item: str):
+    item = item.lower()
+    user_id = str(ctx.author.id)
+
+    if item not in shop_items:
+        await ctx.send("That item doesn't exist in the shop.")
+        return
+
+    data = shop_items[item]
+    price = data["price"]
+    role_name = data["role_name"]
+
+    # Find the role in the guild
+    role = discord.utils.get(ctx.guild.roles, name=role_name)
+    if not role:
+        await ctx.send("This role is not set up in the server.")
+        return
+
+    if role in ctx.author.roles:
+        await ctx.send("You already have this role.")
+        return
+
+    balance = get_balance(user_id)
+    if balance < price:
+        await ctx.send(f"You need {price} coins to buy this role, but you have {balance}.")
+        return
+
+    # Deduct coins and add role
+    set_balance(user_id, balance - price)
+    await ctx.author.add_roles(role)
+    await ctx.send(f"You bought the **{role_name}** role for {price} coins! Enjoy!")
+
+@bot.command()
+@commands.has_permissions(manage_roles=True)
+async def createshoproles(ctx):
+    created = []
+    for item in shop_items.values():
+        role_name = item["role_name"]
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+        if not role:
+            await ctx.guild.create_role(name=role_name)
+            created.append(role_name)
+    if created:
+        await ctx.send(f"Created roles: {', '.join(created)}")
+    else:
+        await ctx.send("All shop roles already exist.")
+
+@bot.command()
+async def inventory(ctx, member: discord.Member = None):
+    if member is None:
+        member = ctx.author
+
+    owned_roles = []
+    for item in shop_items.values():
+        role = discord.utils.get(ctx.guild.roles, name=item["role_name"])
+        if role and role in member.roles:
+            owned_roles.append(role.name)
+
+    if owned_roles:
+        await ctx.send(f"{member.mention}'s Inventory: {', '.join(owned_roles)}")
+    else:
+        await ctx.send(f"{member.mention} doesn't own any shop roles yet.")
+
+@bot.command()
+async def sell(ctx, item: str):
+    item = item.lower()
+    user_id = str(ctx.author.id)
+
+    if item not in shop_items:
+        await ctx.send("That item doesn't exist in the shop.")
+        return
+
+    data = shop_items[item]
+    role_name = data["role_name"]
+    refund = data["price"] // 2
+
+    # Find role in guild
+    role = discord.utils.get(ctx.guild.roles, name=role_name)
+    if not role:
+        await ctx.send("The role for this item doesn't exist.")
+        return
+
+     # Check if it's sellable
+    if not data.get("sellable", True):  # default to True if missing
+        await ctx.send("This item cannot be sold, as it's either a limited or an admin role.")
+        return
+
+    # Check if user owns the role
+    if role not in ctx.author.roles:
+        await ctx.send("You don't own this role.")
+        return
+
+    # Remove role and give refund
+    await ctx.author.remove_roles(role)
+    current_balance = get_balance(user_id)
+    set_balance(user_id, current_balance + refund)
+
+    await ctx.send(f"You sold **{role_name}** for {refund} coins.")
+
+cf_stats = db.table("coinflip_stats")
+
+# Load milestones from JSON file
+def load_milestones():
+    try:
+        with open('milestones.json', 'r') as f:
+            data = json.load(f)
+            # Keys are strings, convert to int
+            return {int(k): v for k, v in data.items()}
+    except FileNotFoundError:
+        return {}
+
+milestone_roles = load_milestones()
+
+def get_cf_wins(user_id):
+    user = cf_stats.get(Query().id == user_id)
+    return user.get("wins", 0) if user else 0
+
+def increment_cf_wins(user_id):
+    current = get_cf_wins(user_id)
+    cf_stats.upsert({"id": user_id, "wins": current + 1}, Query().id == user_id)
+    return current + 1
+
+@bot.command()
+async def cfmilestones(ctx):
+    if not milestone_roles:
+        await ctx.send("No coinflip milestones are set.")
+        return
+
+    lines = []
+    for wins, role_name in sorted(milestone_roles.items()):
+        lines.append(f"**{wins} wins:** {role_name}")
+
+    msg = "**Coinflip Milestones:**\n" + "\n".join(lines)
+    await ctx.send(msg)
+
+@bot.command()
+async def cfstats(ctx, member: discord.Member = None):
+    if member is None:
+        member = ctx.author
+
+    wins = get_cf_wins(str(member.id))
+    embed = discord.Embed(
+        title=f"Coinflip Stats for {member.display_name}",
+        description=f"**Wins:** {wins}",
+        color=discord.Color.blue()
+    )
+    await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def adminpanel(ctx):
+    """Sends admin commands only if used in the admin channel."""
+    admin_channel_id = 123456789012345678  # Replace with your admin channel ID
+
+    if ctx.channel.id != admin_channel_id:
+        await ctx.send(f"Please use this command in <#{admin_channel_id}>.")
+        return
+
+    admin_commands = """
+    **Admin Commands:**
+    - `.kick @user [reason]` - Kick a user from the server.
+    - `.ban @user [reason]` - Ban a user from the server.
+    - `.unban username#1234` - Unban a user by their name and discriminator.
+    - `.mute @user [reason]` - Mute a user by adding the Muted role.
+    - `.unmute @user` - Remove the Muted role from a user.
+    - `.clear <number>` - Bulk delete messages in the current channel.
+    - `.giverole @user role_name` - Give a role to a user.
+    """
+
+    await ctx.send(admin_commands)
+    await ctx.message.delete()  # Optional: delete their command message
 
 # runs the bot with the token from the .env file
 bot.run(BOT1)

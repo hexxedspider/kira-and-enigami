@@ -16,19 +16,9 @@ import json
 # 🔧 Force working directory to script's folder
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-# ✅ Use a safe folder name
-folder_name = "gambled"
+#db.json stores shit
+db = TinyDB("db.json")  # Now in root directory
 
-# Prevent file conflict with folder
-if os.path.exists(folder_name) and not os.path.isdir(folder_name):
-    os.remove(folder_name)
-
-# ✅ Now create folder safely
-os.makedirs(folder_name, exist_ok=True)
-
-# ✅ Setup TinyDB
-db = TinyDB(f"{folder_name}/db.json")
-User = Query()
 
 # ✅ Load environment variables
 load_dotenv()
@@ -48,7 +38,12 @@ intents.message_content = True  # Required to read message content
 # prefix, just like / but not.
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
-BALANCE_FILE = os.path.join("gambling", "db.json")
+BALANCE_FILE = os.path.join("db.json")
+
+if not os.path.exists(BALANCE_FILE) or os.path.getsize(BALANCE_FILE) == 0:
+    with open(BALANCE_FILE, "w") as f:
+        json.dump({}, f, indent=4)
+    balances = {}
 
 # Load balances
 try:
@@ -58,16 +53,21 @@ except FileNotFoundError:
     balances = {}
 
 def get_balance(user_id: int) -> int:
-    return balances.get(str(user_id), 100)  # default start with 100 coins
+    user_key = str(user_id)
+    if user_key not in balances:
+        # Only insert default balance if user is truly new
+        balances[user_key] = 100
+        with open(BALANCE_FILE, "w") as f:
+            json.dump(balances, f, indent=4)
+    return balances[user_key]
 
 def update_balance(user_id: int, amount: int) -> None:
     user_key = str(user_id)
     current = balances.get(user_key, 100)
-    new_balance = max(current + amount, 0)
+    new_balance = max(current + amount, 0)  # Clamp to 0 if it would be negative
     balances[user_key] = new_balance
     with open(BALANCE_FILE, "w") as f:
         json.dump(balances, f, indent=4)
-
 
 @bot.event
 async def on_ready():
@@ -464,15 +464,15 @@ async def rps(ctx):
                 return False
             return True
 
-        @discord.ui.button(label="Rock 🪨", style=ButtonStyle.primary)
+        @discord.ui.button(label="Rock", style=ButtonStyle.primary)
         async def rock(self, interaction: discord.Interaction, button):
             await play_game(interaction, "rock", self.user)
 
-        @discord.ui.button(label="Paper 📄", style=ButtonStyle.success)
+        @discord.ui.button(label="Paper", style=ButtonStyle.success)
         async def paper(self, interaction: discord.Interaction, button):
             await play_game(interaction, "paper", self.user)
 
-        @discord.ui.button(label="Scissors ✂️", style=ButtonStyle.danger)
+        @discord.ui.button(label="Scissors", style=ButtonStyle.danger)
         async def scissors(self, interaction: discord.Interaction, button):
             await play_game(interaction, "scissors", self.user)
 
@@ -494,7 +494,7 @@ async def rps(ctx):
             (user_choice == "paper" and bot_choice == "rock") or
             (user_choice == "scissors" and bot_choice == "paper")
         ):
-            outcome = "You won! 🎉"
+            outcome = "You won!"
             rps_stats[user.id]["wins"] += 1
             update_balance(user.id, WIN_REWARD)
             coin_change = WIN_REWARD

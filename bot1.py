@@ -6,12 +6,13 @@ import random
 import aiohttp
 import asyncpraw 
 from discord.ui import View, Button
-from discord import ButtonStyle
+from discord import ButtonStyle, app_commands
 from collections import defaultdict
 import re
 from tinydb import TinyDB, Query
 import datetime
 import json
+import time
 
 # 🔧 Force working directory to script's folder
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -51,6 +52,15 @@ try:
         balances = json.load(f)
 except FileNotFoundError:
     balances = {}
+
+#load shop items cause it didnt before
+SHOP_FILE = "shop_items.json"
+
+try:
+    with open(SHOP_FILE, "r") as f:
+        shop_items = json.load(f)
+except FileNotFoundError:
+    shop_items = {}
 
 def get_balance(user_id: int) -> int:
     user_key = str(user_id)
@@ -101,15 +111,14 @@ async def assign_bankrupt_role(ctx, user_id):
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(
-        status=discord.Status.dnd
-    )
+    await bot.tree.sync()  # Sync slash commands to Discord
     print(f"Logged in as {bot.user}")
 
 @bot.command()
+@app_commands.describe(item="The item to buy from the shop")
 async def invenilink(ctx):
     try:
-        await ctx.author.send("[Link here.](https://discord.com/oauth2/authorize?client_id=1380716495767605429&permissions=8&integration_type=0&scope=bot)")
+        await ctx.author.send("[Link here.](https://discord.com/oauth2/authorize?client_id=1380716495767605429&permissions=8&integion_type=0&scope=bot)")
     except discord.Forbidden:
         error = await ctx.send("I couldn't DM you. Please check your privacy settings.")
         await error.delete(delay=5)
@@ -174,7 +183,7 @@ async def help(ctx):
     embed3.add_field(name=".serverinfo", value="Get info about the server.", inline=True)
     embed3.add_field(name=".uinfcmd", value="This will send an embed with what 'userinfo' will return.", inline=True)
     embed3.add_field(name=".dminfo", value="Returns a message with the info of your user, but tweaked to work in DMs.", inline=True)
-    embed3.add_field(name=".rps", value="Play rock paper scissors against the bot, also pairs with .rpsstats. Rewards coins.", inline=True)
+    embed3.add_field(name=".rps", value="Play rock paper scissors against the bot, also pairs with .rpsstats. Rewards money.", inline=True)
     embed3.add_field(name=".red", value="Fetches media from a subreddit. Example: .red aww image/gif - .red [nsfw subreddit] image/gif true.", inline=True)
 
     embed4 = discord.Embed(
@@ -205,8 +214,9 @@ async def help(ctx):
     description="Fun & Info Commands",
     color=discord.Color.blurple()
 )
-    embed6.add_field(name=".bet", value="Starts a coinflip challenge for a specified amount of coins.", inline=True)
+    embed6.add_field(name=".bet", value="Starts a coinflip challenge for a specified amount of money.", inline=True)
     embed6.add_field(name=".acceptbet", value="Accepts a coinflip challenge from another user.", inline=True)
+    embed6.add_field(name=".bailout", value="Only able to be used if you have no money, 12h cooldown, awards $50.", inline=True)
     # Create the view with embeds
     view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6])
     await ctx.send(embed=embed1, view=view)
@@ -516,7 +526,9 @@ async def rps(ctx):
         if user_choice == bot_choice:
             outcome = "It's a tie!"
             rps_stats[user.id]["ties"] += 1
-            update_balance(user.id, TIE_REWARD)
+            user_id = str(user.id)
+            current = get_balance(user_id)
+            set_balance(user_id, current + TIE_REWARD)
             coin_change = TIE_REWARD
         elif (
             (user_choice == "rock" and bot_choice == "scissors") or
@@ -525,17 +537,21 @@ async def rps(ctx):
         ):
             outcome = "You won!"
             rps_stats[user.id]["wins"] += 1
-            update_balance(user.id, WIN_REWARD)
+            user_id = str(user.id)
+            current = get_balance(user_id)
+            set_balance(user_id, current + WIN_REWARD)
             coin_change = WIN_REWARD
         else:
             outcome = "I win! Better luck next time."
             rps_stats[user.id]["losses"] += 1
-            await update_balance(user.id, -LOSS_PENALTY, interaction)
+            user_id = str(user.id)
+            current = get_balance(user_id)
+            set_balance(user_id, max(current - LOSS_PENALTY, 0))
             coin_change = -LOSS_PENALTY
 
         stats = rps_stats[user.id]
         stats_msg = f"Wins: {stats['wins']}, Losses: {stats['losses']}, Ties: {stats['ties']}"
-        coin_msg = f"You {'gained' if coin_change > 0 else 'lost'} {abs(coin_change)} coins."
+        coin_msg = f"You {'gained' if coin_change > 0 else 'lost'} ${abs(coin_change)}."
 
         await interaction.response.edit_message(
             content=f"You chose **{user_choice}**.\nI chose **{bot_choice}**.\n\n{outcome}\n\n{coin_msg}\n\n📊 **Your RPS Stats:** {stats_msg}",
@@ -705,7 +721,7 @@ def set_balance(user_id, new_balance):
 async def balance(ctx):
     user_id = str(ctx.author.id)
     balance = get_balance(user_id)
-    await ctx.send(f"{ctx.author.mention}, your balance is {balance} coins.")
+    await ctx.send(f"{ctx.author.mention}, your balance is ${balance}.")
 
 @bot.command()
 async def gamble(ctx, amount: int):
@@ -717,20 +733,20 @@ async def gamble(ctx, amount: int):
         return
 
     if amount > balance:
-        await ctx.send("You don't have enough coins.")
+        await ctx.send("You don't have enough money.")
         return
 
     # Gamble result
     if random.random() < 0.5:
         new_balance = balance - amount
-        result = f"You lost {amount} coins."
+        result = f"You lost ${amount}."
     else:
         new_balance = balance + amount
-        result = f"You won {amount} coins!"
+        result = f"You won ${amount}!"
 
     set_balance(user_id, new_balance)
 
-    await ctx.send(f"{ctx.author.mention}, {result} New balance: {new_balance} coins.")
+    await ctx.send(f"{ctx.author.mention}, {result} New balance: ${new_balance}.")
 
 
 @bot.command()
@@ -768,7 +784,7 @@ async def daily(ctx):
     # Update last_claim to current time (store as ISO string)
     db.update({"last_claim": now.isoformat()}, User.id == user_id)
 
-    await ctx.send(f"{ctx.author.mention}, you received your daily bonus of {bonus_amount} coins. Your new balance is {new_balance}.")
+    await ctx.send(f"{ctx.author.mention}, you received your daily bonus of ${bonus_amount}. Your new balance is ${new_balance}.")
 
 @bot.command()
 async def github(ctx):
@@ -809,11 +825,11 @@ async def bet(ctx, amount: int):
 
     balance = get_balance(user_id)
     if amount > balance:
-        await ctx.send("You don't have enough coins.")
+        await ctx.send("You don't have enough money.")
         return
 
     pending_coinflips[user_id] = {"amount": amount}
-    await ctx.send(f"{ctx.author.mention} has started a coinflip for {amount} coins! Type `.acceptbet @{ctx.author.name}` to accept.")
+    await ctx.send(f"{ctx.author.mention} has started a coinflip for ${amount}! Type `.acceptbet @{ctx.author.name}` to accept.")
 
 # Another user accepts the coinflip
 @bot.command()
@@ -835,10 +851,10 @@ async def acceptbet(ctx, challenger: discord.Member):
     accepter_balance = get_balance(accepter_id)
 
     if accepter_balance < amount:
-        await ctx.send("You don't have enough coins to accept the coinflip.")
+        await ctx.send("You don't have enough money to accept the coinflip.")
         return
     if challenger_balance < amount:
-        await ctx.send("The challenger no longer has enough coins.")
+        await ctx.send("The challenger no longer has enough money.")
         del pending_coinflips[challenger_id]
         return
 
@@ -863,10 +879,9 @@ async def acceptbet(ctx, challenger: discord.Member):
         role_name = milestone_roles[new_wins]
         if role and role not in winner.roles:
             await winner.add_roles(role)
-            await ctx.send(f"🎉 {winner.mention} reached {new_wins} coinflip wins and earned the **{role_name}** role!")
+            await ctx.send(f"{winner.mention} reached {new_wins} coinflip wins and earned the **{role_name}** role!")
 
-
-    await ctx.send(f"Coin flipped! {winner.mention} wins {amount} coins from {loser.mention}!")
+    await ctx.send(f"Coin flipped! {winner.mention} wins ${amount} from {loser.mention}!")
 
 @bot.command()
 @commands.cooldown(1, 10, commands.BucketType.user)
@@ -886,14 +901,14 @@ async def pay(ctx, member: discord.Member, amount: int):
     receiver_balance = get_balance(receiver_id)
 
     if sender_balance < amount:
-        await ctx.send("You don't have enough coins.")
+        await ctx.send("You don't have enough money.")
         return
 
     # Perform the transaction
     set_balance(sender_id, sender_balance - amount)
     set_balance(receiver_id, receiver_balance + amount)
 
-    await ctx.send(f"{ctx.author.mention} paid {member.mention} {amount} coins.")
+    await ctx.send(f"{ctx.author.mention} paid {member.mention} ${amount}.")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -908,13 +923,17 @@ async def reloadshop(ctx):
 async def shop(ctx):
     embed = discord.Embed(title="Shop", color=discord.Color.gold())
     for item_name, data in shop_items.items():
-        embed.add_field(name=item_name.capitalize(), value=f"{data['price']} coins\nRole: {data['role_name']}", inline=True)
+        embed.add_field(name=item_name.capitalize(), value=f"${data['price']}.\nRole: {data['role_name']}", inline=True)
     await ctx.send(embed=embed)
 
 @bot.command()
 async def buy(ctx, item: str):
     item = item.lower()
     user_id = str(ctx.author.id)
+
+    if ctx.guild is None:
+        await ctx.send("This command can only be used in a server, not in DMs.")
+        return
 
     if item not in shop_items:
         await ctx.send("That item doesn't exist in the shop.")
@@ -936,13 +955,13 @@ async def buy(ctx, item: str):
 
     balance = get_balance(user_id)
     if balance < price:
-        await ctx.send(f"You need {price} coins to buy this role, but you have {balance}.")
+        await ctx.send(f"You need ${price} to buy this role, but you have ${balance}.")
         return
 
-    # Deduct coins and add role
+    # Deduct money and add role
     set_balance(user_id, balance - price)
     await ctx.author.add_roles(role)
-    await ctx.send(f"You bought the **{role_name}** role for {price} coins! Enjoy!")
+    await ctx.send(f"You bought the **{role_name}** role for ${price}! Enjoy!")
 
 @bot.command()
 @commands.has_permissions(manage_roles=True)
@@ -1009,7 +1028,7 @@ async def sell(ctx, item: str):
     current_balance = get_balance(user_id)
     set_balance(user_id, current_balance + refund)
 
-    await ctx.send(f"You sold **{role_name}** for {refund} coins.")
+    await ctx.send(f"You sold **{role_name}** for ${refund}.")
 
 cf_stats = db.table("coinflip_stats")
 
@@ -1088,7 +1107,7 @@ async def adminpanel(ctx):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def money(ctx, member: discord.Member, amount: int):
-    """Gives a specified amount of coins to a member."""
+    """Gives a specified amount of money to a member."""
     user_id = str(member.id)
     if amount <= 0:
         await ctx.send("Please enter a valid amount to give.")
@@ -1096,7 +1115,50 @@ async def money(ctx, member: discord.Member, amount: int):
     balance = get_balance(user_id)
     new_balance = balance + amount
     set_balance(user_id, new_balance)
-    await ctx.send(f"Gave {amount} coins to {member.mention}. New balance: {new_balance} coins.")
+    await ctx.send(f"Gave ${amount} to {member.mention}. New balance: ${new_balance}.")
+
+from discord.ext import commands
+import time
+
+# Cooldown tracking (in-memory, resets on bot restart)
+bailout_timestamps = {}
+
+# Settings
+BAILOUT_AMOUNT = 50  # Amount given
+BAILOUT_COOLDOWN = 43200 # 12 hours
+
+@bot.command()
+async def bailout(ctx):
+    user_id = str(ctx.author.id)
+    balance = get_balance(user_id)
+    now = time.time()
+
+    if balance > 0:
+        await ctx.send("You still have money! Bailout is only for bankrupt users.")
+        return
+
+    last_used = bailout_timestamps.get(user_id, 0)
+    remaining = int(BAILOUT_COOLDOWN - (now - last_used))
+    if remaining > 0:
+        hours, remainder = divmod(remaining, 3600)
+        minutes, _ = divmod(remainder, 60)
+        await ctx.send(f"You need to wait {hours}h {minutes}m before using bailout again.")
+        return
+
+    # Give bailout and tag role
+    set_balance(user_id, BAILOUT_AMOUNT)
+    bailout_timestamps[user_id] = now
+
+    role = discord.utils.get(ctx.guild.roles, name="Once Bankrupt")
+    if role:
+        await ctx.author.add_roles(role)
+
+    await ctx.send(f"{ctx.author.mention}, you’ve been bailed out with ${BAILOUT_AMOUNT}. Use it wisely!")
+
+@bot.command()
+async def kiratest(ctx):
+    """sends the bot's test server"""
+    await ctx.send("Kirabiter is being constantly tested, which extends to enigami, and enikami. If you want to join the test server, [click here or the invite underneath.](https://discord.gg/aCWhx4TK)")
 
 # runs the bot with the token from the .env file
 bot.run(BOT1)

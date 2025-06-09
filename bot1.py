@@ -61,28 +61,57 @@ def get_balance(user_id: int) -> int:
             json.dump(balances, f, indent=4)
     return balances[user_key]
 
-def update_balance(user_id: int, amount: int) -> None:
+async def update_balance(user_id: int, amount: int, ctx: commands.Context = None):
     user_key = str(user_id)
     current = balances.get(user_key, 100)
-    new_balance = max(current + amount, 0)  # Clamp to 0 if it would be negative
+    new_balance = max(current + amount, 0)
     balances[user_key] = new_balance
+
+    # Save balances to file
     with open(BALANCE_FILE, "w") as f:
         json.dump(balances, f, indent=4)
+
+    # If bankrupt and context is given, assign role
+    if current > 0 and new_balance == 0 and ctx is not None:
+        await assign_bankrupt_role(ctx, user_id)
+
+async def assign_bankrupt_role(ctx, user_id):
+    guild = ctx.guild
+    member = guild.get_member(user_id)
+    if member is None:
+        return
+
+    # Find or create the role
+    role_name = "Once Bankrupt"
+    role = discord.utils.get(guild.roles, name=role_name)
+    if role is None:
+        try:
+            role = await guild.create_role(name=role_name)
+        except discord.Forbidden:
+            await ctx.send("I don't have permission to create roles.")
+            return
+
+    # Assign the role
+    if role not in member.roles:
+        try:
+            await member.add_roles(role)
+            await ctx.send(f"{member.mention} has gone bankrupt and earned the **{role_name}** role.")
+        except discord.Forbidden:
+            await ctx.send("I can't assign roles. Please check my permissions.")
 
 @bot.event
 async def on_ready():
     await bot.change_presence(
-        activity=discord.Activity(type=discord.ActivityType.listening, name=".help"),
-        status=discord.Status.online
+        status=discord.Status.dnd
     )
-    print(f"✅ Logged in as {bot.user}")
+    print(f"Logged in as {bot.user}")
 
 @bot.command()
 async def invenilink(ctx):
     try:
         await ctx.author.send("[Link here.](https://discord.com/oauth2/authorize?client_id=1380716495767605429&permissions=8&integration_type=0&scope=bot)")
     except discord.Forbidden:
-        error = await ctx.send("❌ I couldn't DM you. Please check your privacy settings.")
+        error = await ctx.send("I couldn't DM you. Please check your privacy settings.")
         await error.delete(delay=5)
 
     await ctx.message.delete(delay=0.1)
@@ -501,7 +530,7 @@ async def rps(ctx):
         else:
             outcome = "I win! Better luck next time."
             rps_stats[user.id]["losses"] += 1
-            update_balance(user.id, -LOSS_PENALTY)
+            await update_balance(user.id, -LOSS_PENALTY, interaction)
             coin_change = -LOSS_PENALTY
 
         stats = rps_stats[user.id]
@@ -697,7 +726,7 @@ async def gamble(ctx, amount: int):
         balance += amount
         result = f"You won {amount} coins!"
 
-    set_balance(user_id, balance)
+    await set_balance(user_id, balance)
     await ctx.send(f"{ctx.author.mention}, {result} New balance: {balance} coins.")
 
 @bot.command()
@@ -1050,6 +1079,19 @@ async def adminpanel(ctx):
 
     await ctx.send(admin_commands)
     await ctx.message.delete()  # Optional: delete their command message
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def money(ctx, member: discord.Member, amount: int):
+    """Gives a specified amount of coins to a member."""
+    user_id = str(member.id)
+    if amount <= 0:
+        await ctx.send("Please enter a valid amount to give.")
+        return
+    balance = get_balance(user_id)
+    new_balance = balance + amount
+    set_balance(user_id, new_balance)
+    await ctx.send(f"Gave {amount} coins to {member.mention}. New balance: {new_balance} coins.")
 
 # runs the bot with the token from the .env file
 bot.run(BOT1)

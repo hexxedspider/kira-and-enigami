@@ -715,19 +715,23 @@ async def gamble(ctx, amount: int):
     if amount <= 0:
         await ctx.send("Please enter a valid amount to gamble.")
         return
+
     if amount > balance:
         await ctx.send("You don't have enough coins.")
         return
 
+    # Gamble result
     if random.random() < 0.5:
-        balance -= amount
+        new_balance = balance - amount
         result = f"You lost {amount} coins."
     else:
-        balance += amount
+        new_balance = balance + amount
         result = f"You won {amount} coins!"
 
-    await set_balance(user_id, balance)
-    await ctx.send(f"{ctx.author.mention}, {result} New balance: {balance} coins.")
+    set_balance(user_id, new_balance)
+
+    await ctx.send(f"{ctx.author.mention}, {result} New balance: {new_balance} coins.")
+
 
 @bot.command()
 async def daily(ctx):
@@ -1075,6 +1079,7 @@ async def adminpanel(ctx):
     - `.unmute @user` - Remove the Muted role from a user.
     - `.clear <number>` - Bulk delete messages in the current channel.
     - `.giverole @user role_name` - Give a role to a user.
+    - `.money @user role_name [amount]` - Give money to a user, only used for testing purposes.
     """
 
     await ctx.send(admin_commands)

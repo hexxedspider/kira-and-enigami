@@ -25,9 +25,9 @@ def nsfw_check():
     async def predicate(ctx):
         if ctx.guild and not ctx.channel.is_nsfw():
             try:
-                await ctx.author.send("❌ This command can only be used in NSFW channels or in DMs.")
+                await ctx.author.send("This command can only be used in NSFW channels or in DMs.")
             except discord.Forbidden:
-                await ctx.reply("❌ Please enable DMs to receive error messages.")
+                await ctx.reply("Please enable DMs to receive error messages.")
             return False
         return True
     return commands.check(predicate)
@@ -49,7 +49,7 @@ async def help(ctx):
                 "$help command can only be used in NSFW channels. Try again in an age-restricted channel or here in DMs."
             )
         except discord.Forbidden:
-            await ctx.reply("❌ Please enable DMs to receive error messages.")
+            await ctx.reply("Please enable DMs to receive error messages.")
         return
 
     embed = discord.Embed(title="⛧°. ⋆𓌹*♰*𓌺⋆. °⛧", color=discord.Color.blue())
@@ -169,13 +169,13 @@ async def r34_logic(ctx_or_msg, tags: str):
     if guild is not None and channel is not None and not channel.is_nsfw():
         try:
             await author.send(
-                "❌ This command can only be used in NSFW channels or in DMs. Try again in a proper channel or DM me."
+                "This command can only be used in NSFW channels or in DMs. Try again in a proper channel or DM me."
             )
         except discord.Forbidden:
             if hasattr(ctx_or_msg, 'reply'):
-                await ctx_or_msg.reply("❌ Please enable DMs to receive error messages.")
+                await ctx_or_msg.reply("Please enable DMs to receive error messages.")
             else:
-                await channel.send(f"{author.mention} ❌ Please enable DMs to receive error messages.")
+                await channel.send(f"{author.mention} Please enable DMs to receive error messages.")
         return
 
     tags_list = tags.split()

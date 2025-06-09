@@ -7,6 +7,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 import asyncpraw
 import xml.etree.ElementTree as ET
+import asyncio
 
 # Load token from .env
 load_dotenv()
@@ -59,11 +60,11 @@ async def help(ctx):
     embed.add_field(name="!yandere",value=("Search Yande.re for NSFW images by tags. Use spaces to separate tags.\nUsed like r34, and can also handle videos and gifs."),inline=True,)
     embed.add_field(name="!gelbooru",value=("Search Gelbooru for NSFW images by tags. Use spaces to separate tags.\nUsed like r34, and can also handle videos and gifs."),inline=True,)
     embed.add_field(name="!danbooru",value=("Similar to Gelbooru, except typically considered better.\nUsed like r34, and can also handle videos and gifs."),inline=True,)
-    embed.add_field(name="Example usage",value=("'!r34 big_boobs goth' for multiple tags.\n'!ptn goth mom' to search Pornhub and provide a thumbnail."),inline=True,)
     embed.add_field(name="!femboy", value="Fetches a random femboy image from Reddit. Only works in DMs. Fuck you Froggy for saying I should make this.", inline=True)
     embed.add_field(name="!xbooru", value=("Search Xbooru for NSFW images by tags. Use spaces to separate tags.\nUsed like r34, and can also handle videos and gifs."), inline=True)
-    embed.add_field(name="!realbooru", value=("Search Realbooru for NSFW images by tags. Use spaces to separate tags.\nUsed like r34, and can also handle videos and gifs."), inline=True)
+    embed.add_field(name="!realbooru", value=("Search Realbooru for NSFW images by tags. Use spaces to separate tags.\nUsed like r34, and can also handle videos and gifs.\nTheir API is currently broken."), inline=True)
     embed.add_field(name="!konachan", value=("Search Konachan for NSFW images by tags. Use spaces to separate tags.\nUsed like r34, and can also handle videos and gifs."), inline=True)
+    embed.add_field(name="Example usage",value=("'!r34 big_boobs goth' for multiple tags.\n'!ptn goth mom' to search Pornhub and provide a thumbnail."),inline=True,)
 
     embed.set_footer(text="Use these commands in NSFW channels only, or DMs.")
 
@@ -532,19 +533,21 @@ async def xbooru(ctx, *, tags: str = None):
 
 @bot.command()
 @nsfw_check()
-@commands.cooldown(1, random.randint(4, 7), commands.BucketType.user)
 async def realbooru(ctx, *, tags: str = None):
+
     base_url = "https://realbooru.com/index.php"
-    query_tags = " ".join(tags.split()) if tags else ""
-    full_tags = f"{query_tags} rating:explicit"
+    limit = 100
+
+    # Realbooru uses underscores, not spaces
+    query_tags = "_".join(tags.split()) if tags else ""
+    full_tags = query_tags  # don't add "rating:explicit"
 
     params = {
         "page": "dapi",
         "s": "post",
         "q": "index",
-        "json": 1,
-        "limit": 100,
-        "tags": full_tags,
+        "limit": limit,
+        "tags": full_tags
     }
 
     async with aiohttp.ClientSession() as session:
@@ -552,37 +555,41 @@ async def realbooru(ctx, *, tags: str = None):
             if resp.status != 200:
                 await ctx.send("Failed to fetch from Realbooru.")
                 return
+
             try:
-                data = await resp.json()
-            except:
+                text_data = await resp.text()
+                root = ET.fromstring(text_data)
+                posts = root.findall(".//post")
+            except Exception as e:
                 await ctx.send("Failed to parse Realbooru response.")
+                print(f"[Realbooru Error] {e}")
                 return
 
-    posts = data if isinstance(data, list) else data.get("post") or []
     if not posts:
-        await ctx.send("No results found.")
+        await ctx.send("No results found for those tags.")
         return
 
     post = random.choice(posts)
-    file_url = post.get("file_url")
+    file_url = post.get("file_url") or post.get("sample_url") or post.get("preview_url")
     post_id = post.get("id")
-    tags_str = post.get("tags", "")
+    tag_str = post.get("tags", "")
 
     if not file_url:
-        await ctx.send("No image URL found.")
+        await ctx.send("No media URL found.")
         return
 
     if file_url.endswith((".mp4", ".webm", ".gif")):
-        await ctx.send(f"Realbooru video: [View]({file_url})")
+        await ctx.send(f"Realbooru video post: [Click here to view]({file_url})")
     else:
         embed = discord.Embed(
             title="Realbooru Result",
             url=f"https://realbooru.com/index.php?page=post&s=view&id={post_id}",
-            description=f"Tags: `{tags_str[:250]}...`" if tags_str else None,
-            color=discord.Color.red()
+            description=f"Tags: `{tag_str[:250]}...`" if tag_str else None,
+            color=discord.Color.dark_red()
         )
         embed.set_image(url=file_url)
         embed.set_footer(text="Source: Realbooru")
+
         await ctx.send(embed=embed)
 
 @bot.command()
@@ -636,6 +643,69 @@ async def konachan(ctx, *, tags: str = None):
         )
         embed.set_image(url=file_url)
         embed.set_footer(text="Source: Konachan")
+        await ctx.send(embed=embed)
+
+@bot.command()
+@nsfw_check()
+async def tbib(ctx, *, tags: str = None):
+    base_url = "https://tbib.org/index.php"
+    limit = 100
+
+    # Format tags: "tag1 tag2" → "tag1+tag2"
+    formatted_tags = "+".join(tags.split()) if tags else ""
+    full_tags = f"{formatted_tags}+rating:explicit"
+
+    params = {
+        "page": "dapi",
+        "s": "post",
+        "q": "index",
+        "json": 1,
+        "limit": limit,
+        "tags": full_tags
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(base_url, params=params) as resp:
+            if resp.status != 200:
+             await ctx.send("❌ Failed to fetch from TBIB.")
+             return
+    text = await resp.text()
+    print(text)  # <-- Debug: see raw response
+    try:
+        data = await resp.json()
+    except Exception as e:
+        await ctx.send("❌ Failed to parse TBIB response.")
+        print(f"Parsing error: {e}")
+        return
+
+
+    posts = data if isinstance(data, list) else data.get("post") or []
+
+    if not posts:
+        await ctx.send("No results found for those tags.")
+        return
+
+    post = random.choice(posts)
+    file_url = post.get("file_url") or post.get("sample_url") or post.get("preview_url")
+    post_id = post.get("id")
+    tags_str = post.get("tags", "")
+
+    if not file_url:
+        await ctx.send("No image URL found in the post.")
+        return
+
+    if file_url.endswith((".mp4", ".webm", ".gif")):
+        await ctx.send(f"TBIB video post: [Click here to view]({file_url})")
+    else:
+        embed = discord.Embed(
+            title="TBIB Result",
+            url=f"https://tbib.org/index.php?page=post&s=view&id={post_id}",
+            description=f"Tags: `{tags_str[:250]}...`" if tags_str else None,
+            color=discord.Color.dark_red()
+        )
+        embed.set_image(url=file_url)
+        embed.set_footer(text="Source: TBIB")
+
         await ctx.send(embed=embed)
 
 

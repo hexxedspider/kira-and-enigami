@@ -88,18 +88,102 @@ async def complete_investment(user_id, ctx):
 
 investments = {}
 
+@tasks.loop(minutes=15)
+async def apply_bank_interest():
+    INTEREST_MULTIPLIER = 1.05 
+    INTEREST_CAP = 2000        # Optional: cap per payout
+
+    now = datetime.utcnow()
+    for user_id, data in balances.items():
+        if isinstance(data, dict) and "bank" in data:
+            current_bank = data["bank"]
+            if current_bank > 0:
+                # Apply 1.1x growth
+                interest = int(current_bank * (INTEREST_MULTIPLIER - 1))
+                interest = min(interest, INTEREST_CAP)  # Optional cap
+                data["bank"] += interest
+                # Optionally, store last payout time
+                data["last_interest"] = now.isoformat()
+
+    with open(BALANCE_FILE, "w") as f:
+        json.dump(balances, f, indent=4)
+
+async def complete_investment_after_delay(user_id, amount, delay):
+    await asyncio.sleep(delay)
+    profit = int(amount * 1.2)
+
+    updated = get_full_balance(user_id)
+    new_wallet = updated["wallet"] + profit
+    set_full_balance(user_id, new_wallet, updated["bank"])
+
+    db.table("investments").remove(Query().id == user_id)
+    investments.pop(user_id, None)
+
+    user = bot.get_user(int(user_id))
+    if user:
+        try:
+            await user.send(f"Your ${amount} investment has matured into ${profit}!")
+        except Exception as e:
+            print(f"[Investment] Couldn't DM user {user_id}: {e}")
+
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
-    
-    investment_table = db.table("investments")
-    for entry in investment_table.all():
-        user_id = entry["id"]
-        # If investment is already overdue, finish it instantly
-        # If not, schedule it
-        fake_ctx = await bot.fetch_user(int(user_id))
-        if fake_ctx:
-            investments[user_id] = bot.loop.create_task(complete_investment(user_id, fake_ctx))
+    now = time.time()
+    for inv in db.table("investments").all():
+        user_id = inv["id"]
+        amount = inv["amount"]
+        start_time = inv["start_time"]
+        duration = 300
+        elapsed = now - start_time
+        remaining = duration - elapsed
+
+        if remaining > 0:
+            # Schedule the task with remaining time
+            task = bot.loop.create_task(complete_investment_after_delay(user_id, amount, remaining))
+            investments[user_id] = {
+                "task": task,
+                "start_time": start_time,
+                "duration": duration
+            }
+        else:
+            # It matured while the bot was down — pay now
+            updated = get_full_balance(user_id)
+            profit = int(amount * 1.2)
+            new_wallet = updated["wallet"] + profit
+            set_full_balance(user_id, new_wallet, updated["bank"])
+            db.table("investments").remove(Query().id == user_id)
+
+            user = bot.get_user(int(user_id))
+            if user:
+                try:
+                    await user.send(f"While I was offline, your ${amount} investment matured into ${profit}!")
+                except:
+                    pass
+
+async def complete_investment(ctx, user_id, amount, start_time):
+    now = time.time()
+    elapsed = now - start_time
+    remaining = max(0, 300 - elapsed)
+    await asyncio.sleep(remaining)
+
+    profit = int(amount * 1.2)
+    updated = get_full_balance(user_id)
+    set_full_balance(user_id, updated["wallet"] + profit, updated["bank"])
+
+    db.table("investments").remove(User.id == user_id)
+    investments.pop(user_id, None)
+
+    # Notify user
+    try:
+        if ctx is not None:
+            await ctx.send(f"{ctx.author.mention}, your ${amount} investment has grown to ${profit}!")
+        else:
+            user = bot.get_user(int(user_id))
+            if user:
+                await user.send(f"Your ${amount} investment has matured into ${profit}!")
+    except Exception as e:
+        print(f"[Investment] Could not notify user {user_id}: {e}")
 
 @bot.event
 async def on_ready():
@@ -286,6 +370,7 @@ async def help(ctx):
     embed4.add_field(name=".daily", value="Gives a daily bonus of 100.", inline=True)
     embed4.add_field(name=".say", value="Forces the bot to say your message in the same channel, and it deletes your original message.", inline=True)
     embed4.add_field(name=".github", value="Sends a link to the bot's github (all three are in the repo').", inline=True)
+    embed4.add_field(name=".invest", value="Returns money you put in at a 1.2x return after 5 minutes/")
 
     embed5 = discord.Embed(
     title="Help Page 5",
@@ -303,10 +388,14 @@ async def help(ctx):
     title="Help Page 6",
     description="Fun & Info Commands",
     color=discord.Color.blurple()
-)
+)# embed6.add_field(name=".", value="", inline=True)
     embed6.add_field(name=".bet", value="Starts a coinflip challenge for a specified amount of money.", inline=True)
     embed6.add_field(name=".acceptbet", value="Accepts a coinflip challenge from another user.", inline=True)
     embed6.add_field(name=".bailout", value="Only able to be used if you have no money, 12h cooldown, awards $50.", inline=True)
+    embed6.add_field(name=".timeinvest", value="Shows how much longer until your investment is over.", inline=True)
+    embed6.add_field(name=".blackjack", value="Bet a amount of your choosing and play blackjack against the bot.", inline=True)
+    embed6.add_field(name=".rob", value="5 minute cooldown, try to rob a person of money. 20 percent chance of being successful, lose money if not. ", inline=True)
+
     # Create the view with embeds
     view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6])
     await ctx.send(embed=embed1, view=view)
@@ -314,7 +403,7 @@ async def help(ctx):
 @bot.command()
 async def die(ctx):
     roll = random.randint(1, 6)
-    await ctx.send(f"🎲 You rolled a {roll}!")
+    await ctx.send(f"You rolled a {roll}!")
 
 @bot.command()
 async def uinfcmd(ctx):
@@ -1204,7 +1293,7 @@ async def adminpanel(ctx):
     - `.unmute @user` - Remove the Muted role from a user.
     - `.clear <number>` - Bulk delete messages in the current channel.
     - `.giverole @user role_name` - Give a role to a user.
-    - `.money @user role_name [amount]` - Give money to a user, only used for testing purposes.
+    - `.money @user role_name [amount]` - Give money to a user, only used for testing purposes. Only works in servers, NOT DMs.
     """
 
     await ctx.send(admin_commands)
@@ -1218,10 +1307,11 @@ async def money(ctx, member: discord.Member, amount: int):
     if amount <= 0:
         await ctx.send("Please enter a valid amount to give.")
         return
-    balance = get_balance(user_id)
-    new_balance = balance + amount
-    set_balance(user_id, new_balance)
-    await ctx.send(f"Gave ${amount} to {member.mention}. New balance: ${new_balance}.")
+
+    data = get_full_balance(user_id)
+    new_wallet = data["wallet"] + amount
+    set_full_balance(user_id, new_wallet, data["bank"])
+    await ctx.send(f"Gave ${amount} to {member.mention}. New wallet balance: ${new_wallet}.")
 
 from discord.ext import commands
 import time
@@ -1284,32 +1374,33 @@ async def rob(ctx, target: discord.Member):
         await ctx.send("You can't rob yourself, dingus.")
         return
 
-    thief_balance = get_balance(thief_id)
-    target_balance = get_balance(target_id)
+    thief_data = get_full_balance(thief_id)
+    target_data = get_full_balance(target_id)
 
-    if target_balance < 100:
-        await ctx.send(f"{target.mention} doesn't have enough money to rob.")
+    if target_data["wallet"] < 100:
+        await ctx.send(f"{target.mention} doesn't have enough money in their **wallet** to rob.")
         return
 
-    if thief_balance < 50:
-        await ctx.send("You need at least $50 to attempt a robbery.")
+    if thief_data["wallet"] < 50:
+        await ctx.send("You need at least $50 in your **wallet** to attempt a robbery.")
         return
 
-    success = random.random() < 0.8 # 20% success chance
+    success = random.random() < 0.2  # 20% success chance
 
     if success:
-        stolen_amount = int(target_balance * 0.2)
-        new_thief_balance = thief_balance + stolen_amount
-        new_target_balance = target_balance - stolen_amount
+        stolen_amount = int(target_data["wallet"] * 0.2)
+        new_thief_wallet = thief_data["wallet"] + stolen_amount
+        new_target_wallet = target_data["wallet"] - stolen_amount
 
-        set_balance(thief_id, new_thief_balance)
-        set_balance(target_id, new_target_balance)
+        set_full_balance(thief_id, new_thief_wallet, thief_data["bank"])
+        set_full_balance(target_id, new_target_wallet, target_data["bank"])
 
         await ctx.send(f"Success! You stole $**{stolen_amount}** from {target.mention}!")
     else:
-        lost_amount = int(thief_balance * 0.7)
-        new_thief_balance = max(thief_balance - lost_amount, 0)
-        set_balance(thief_id, new_thief_balance)
+        lost_amount = int(thief_data["wallet"] * 0.7)
+        new_thief_wallet = max(thief_data["wallet"] - lost_amount, 0)
+
+        set_full_balance(thief_id, new_thief_wallet, thief_data["bank"])
 
         await ctx.send(f"You failed the robbery and lost $**{lost_amount}**!")
 
@@ -1566,35 +1657,37 @@ async def invest(ctx, amount: int):
         await ctx.send("You don't have enough money in your wallet.")
         return
 
-    # Check if already invested
-    if user_id in investments:
+    if db.table("investments").contains(User.id == user_id):
         await ctx.send("You already have an active investment.")
         return
 
-    # Deduct money
     new_wallet = data["wallet"] - amount
     set_full_balance(user_id, new_wallet, data["bank"])
 
+    start_time = time.time()
+    db.table("investments").upsert({
+        "id": user_id,
+        "amount": amount,
+        "start_time": start_time
+    }, User.id == user_id)
+
     await ctx.send(f"You invested ${amount}. You now have ${new_wallet} in your wallet.")
 
-    # Store investment with current timestamp
-    start_time = time.time()
-    investments[user_id] = {
-        "task": bot.loop.create_task(complete_investment(ctx, user_id, amount)),
-        "start_time": start_time,
-        "duration": 300  # seconds (5 minutes)
-    }
+    # Start async timer
+    task = bot.loop.create_task(complete_investment(ctx, user_id, amount, start_time))
+    investments[user_id] = {"task": task, "start_time": start_time, "duration": 300}
 
-async def complete_investment(ctx, user_id, amount):
-    await asyncio.sleep(300)  # 5 minutes
+async def complete_investment(ctx, user_id, amount, start_time):
+    now = time.time()
+    elapsed = now - start_time
+    remaining = max(0, 300 - elapsed)
+    await asyncio.sleep(remaining)
+
     profit = int(amount * 1.2)
-
-    # Re-load balances after time delay
     updated = get_full_balance(user_id)
-    new_wallet = updated["wallet"] + profit
-    set_full_balance(user_id, new_wallet, updated["bank"])
+    set_full_balance(user_id, updated["wallet"] + profit, updated["bank"])
 
-    # Remove from active investments
+    db.table("investments").remove(User.id == user_id)
     investments.pop(user_id, None)
 
     await ctx.send(f"{ctx.author.mention}, your ${amount} investment has grown to ${profit}!")
@@ -1602,16 +1695,45 @@ async def complete_investment(ctx, user_id, amount):
 @bot.command()
 async def timeinvest(ctx):
     user_id = str(ctx.author.id)
-    if user_id not in investments:
+    inv = db.table("investments").get(User.id == user_id)
+    if not inv:
         await ctx.send("You don't have any active investments right now.")
         return
 
-    inv = investments[user_id]
     elapsed = time.time() - inv["start_time"]
-    remaining = max(0, inv["duration"] - elapsed)
+    remaining = max(0, 300 - elapsed)
     minutes, seconds = divmod(int(remaining), 60)
 
     await ctx.send(f"Your investment will complete in {minutes}m {seconds}s.")
+
+@bot.event
+async def on_ready():
+    print(f"Bot logged in as {bot.user}")
+    now = time.time()
+
+    for inv in db.table("investments").all():
+        user_id = inv["id"]
+        amount = inv["amount"]
+        start_time = inv["start_time"]
+
+        elapsed = now - start_time
+        remaining = 300 - elapsed
+
+        if remaining <= 0:
+            # Auto-complete investment
+            profit = int(amount * 1.2)
+            updated = get_full_balance(user_id)
+            set_full_balance(user_id, updated["wallet"] + profit, updated["bank"])
+            db.table("investments").remove(User.id == user_id)
+            user = bot.get_user(int(user_id))
+            if user:
+                try:
+                    await user.send(f"While I was offline, your ${amount} investment matured into ${profit}!")
+                except:
+                    pass
+        else:
+            task = bot.loop.create_task(complete_investment(None, user_id, amount, start_time))
+            investments[user_id] = {"task": task, "start_time": start_time, "duration": 300}
 
 # runs the bot with the token from the .env file
 bot.run(BOT1)

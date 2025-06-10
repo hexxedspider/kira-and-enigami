@@ -98,7 +98,6 @@ async def apply_bank_interest():
         if isinstance(data, dict) and "bank" in data:
             current_bank = data["bank"]
             if current_bank > 0:
-                # Apply 1.1x growth
                 interest = int(current_bank * (INTEREST_MULTIPLIER - 1))
                 interest = min(interest, INTEREST_CAP)  # Optional cap
                 data["bank"] += interest

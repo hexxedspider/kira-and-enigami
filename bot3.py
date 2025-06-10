@@ -5,6 +5,7 @@ import os
 import random
 import aiohttp
 import asyncio
+from datetime import datetime
 
 # Load token from .env
 load_dotenv()
@@ -16,6 +17,23 @@ intents.message_content = True  # Needed to read message content
 
 # Create bot instance
 bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)
+
+# Path to your log file
+LOG_FILE = "command_log_3.txt"
+
+def log_command(ctx):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    username = f"{ctx.author.name}#{ctx.author.discriminator}"
+    command_used = ctx.message.content
+    guild_name = ctx.guild.name if ctx.guild else "DM"
+
+    log_line = f"[{timestamp}] [{guild_name}] {username}: {command_used}\n"
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(log_line)
+
+@bot.event
+async def on_command(ctx):
+    log_command(ctx)
 
 # Store running loops by channel ID
 r34_loops = {}

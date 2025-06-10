@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import asyncpraw
 import xml.etree.ElementTree as ET
 import asyncio
+import datetime
 
 # Load token from .env
 load_dotenv()
@@ -31,6 +32,23 @@ def nsfw_check():
             return False
         return True
     return commands.check(predicate)
+
+# Path to your log file
+LOG_FILE = "command_log_2.txt"
+
+def log_command(ctx):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    username = f"{ctx.author.name}#{ctx.author.discriminator}"
+    command_used = ctx.message.content
+    guild_name = ctx.guild.name if ctx.guild else "DM"
+
+    log_line = f"[{timestamp}] [{guild_name}] {username}: {command_used}\n"
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(log_line)
+
+@bot.event
+async def on_command(ctx):
+    log_command(ctx)
 
 # ---------- HELP command ----------
 @bot.command()

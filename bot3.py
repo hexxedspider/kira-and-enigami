@@ -27,7 +27,7 @@ def log_command(ctx):
     command_used = ctx.message.content
     guild_name = ctx.guild.name if ctx.guild else "DM"
 
-    log_line = f"[{timestamp}] [{guild_name}] {username}: {command_used}\n"
+    log_line = f"[enikami - enigami extended] [{timestamp}] [{guild_name}] {username}: {command_used}\n"
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(log_line)
 

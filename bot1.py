@@ -22,15 +22,10 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 #db.json stores shit
 db = TinyDB("db.json")  # Now in root directory
 
-# ✅ Load environment variables
-load_dotenv()
-BOT1 = os.getenv("BOT1")
-
-# line 8 pulls from the .env file, make your own .env file with this exact code "TOKEN=(your bot token)"
-load_dotenv()
-
 # actually grabbing the token from the .env file
+load_dotenv()
 BOT1 = os.getenv("BOT1")
+OWNID = os.getenv("OWNID")
 
 # intents are basic permissions that the bot needs to function
 # e.g. intents.message_content allows the bot to read the content of messages
@@ -39,6 +34,9 @@ intents.message_content = True  # Required to read message content
 
 # prefix, just like / but not.
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
+
+investments_table = db.table("investments")
+User = Query()
 
 # Path to your log file
 LOG_FILE = "command_log_1.txt"
@@ -63,28 +61,6 @@ if not os.path.exists(BALANCE_FILE) or os.path.getsize(BALANCE_FILE) == 0:
     with open(BALANCE_FILE, "w") as f:
         json.dump({}, f, indent=4)
     balances = {}
-
-async def complete_investment(user_id, ctx):
-    investment_table = db.table("investments")
-    entry = investment_table.get(User.id == user_id)
-    if not entry:
-        return
-
-    now = time.time()
-    elapsed = now - entry["start_time"]
-    remaining = max(0, 300 - elapsed)
-
-    await asyncio.sleep(remaining)
-
-    profit = int(entry["amount"] * 1.2)
-    balance = get_full_balance(user_id)
-    new_wallet = balance["wallet"] + profit
-    set_full_balance(user_id, new_wallet, balance["bank"])
-
-    investment_table.remove(User.id == user_id)
-    investments.pop(user_id, None)
-
-    await ctx.send(f"<@{user_id}>, your investment of ${entry['amount']} returned ${profit}!")
 
 investments = {}
 
@@ -125,78 +101,22 @@ async def complete_investment_after_delay(user_id, amount, delay):
         except Exception as e:
             print(f"[Investment] Couldn't DM user {user_id}: {e}")
 
-@bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user}")
-    now = time.time()
-    for inv in db.table("investments").all():
-        user_id = inv["id"]
-        amount = inv["amount"]
-        start_time = inv["start_time"]
-        duration = 300
-        elapsed = now - start_time
-        remaining = duration - elapsed
 
-        if remaining > 0:
-            # Schedule the task with remaining time
-            task = bot.loop.create_task(complete_investment_after_delay(user_id, amount, remaining))
-            investments[user_id] = {
-                "task": task,
-                "start_time": start_time,
-                "duration": duration
-            }
-        else:
-            # It matured while the bot was down — pay now
-            updated = get_full_balance(user_id)
-            profit = int(amount * 1.2)
-            new_wallet = updated["wallet"] + profit
-            set_full_balance(user_id, new_wallet, updated["bank"])
-            db.table("investments").remove(Query().id == user_id)
-
-            user = bot.get_user(int(user_id))
-            if user:
-                try:
-                    await user.send(f"While I was offline, your ${amount} investment matured into ${profit}!")
-                except:
-                    pass
-
-async def complete_investment(ctx, user_id, amount, start_time):
-    now = time.time()
-    elapsed = now - start_time
-    remaining = max(0, 300 - elapsed)
-    await asyncio.sleep(remaining)
-
+async def complete_investment_no_ctx(user_id, amount, delay):
+    await asyncio.sleep(delay)
     profit = int(amount * 1.2)
+
     updated = get_full_balance(user_id)
     set_full_balance(user_id, updated["wallet"] + profit, updated["bank"])
-
-    db.table("investments").remove(User.id == user_id)
+    db.table("investments").remove(Query().id == user_id)
     investments.pop(user_id, None)
 
-    # Notify user
-    try:
-        if ctx is not None:
-            await ctx.send(f"{ctx.author.mention}, your ${amount} investment has grown to ${profit}!")
-        else:
-            user = bot.get_user(int(user_id))
-            if user:
-                await user.send(f"Your ${amount} investment has matured into ${profit}!")
-    except Exception as e:
-        print(f"[Investment] Could not notify user {user_id}: {e}")
-
-@bot.event
-async def on_ready():
-    investment_table = db.table("investments")
-
-    for entry in investment_table.all():
-        user_id = entry["id"]
+    user = bot.get_user(int(user_id))
+    if user:
         try:
-            user = await bot.fetch_user(int(user_id))
-            fake_ctx = SimpleNamespace(author=user, send=user.send)
-            investments[user_id] = bot.loop.create_task(complete_investment(user_id, fake_ctx))
+            await user.send(f"💰 Your ${amount} investment matured into ${profit} while I was offline.")
         except Exception as e:
-            print(f"Couldn't resume investment for {user_id}: {e}")
-
+            print(f"[Investment] Could not DM user {user_id}: {e}")
 
 # Load balances
 try:
@@ -281,11 +201,6 @@ async def assign_bankrupt_role(ctx, user_id):
             await ctx.send(f"{member.mention} has gone bankrupt and earned the **{role_name}** role.")
         except discord.Forbidden:
             await ctx.send("I can't assign roles. Please check my permissions.")
-
-@bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user}")
-    apply_bank_interest.start()
 
 @bot.command()
 @app_commands.describe(item="The item to buy from the shop")
@@ -575,78 +490,65 @@ async def define(ctx, *, term: str):
 
 reddit = None  # global placeholder
 
-@bot.event
-async def on_ready():
-    global reddit
-    if reddit is None:
-        reddit = asyncpraw.Reddit(
-            client_id="SpJjzgRg0fUK8TKAmGsWdw",
-            client_secret="B88RbmU0BQ7dRc2LC1_3cGYeHbc3dw",
-            user_agent="DiscordBot by u/suicidespiders"
-        )
-    print(f"Logged in as {bot.user}")
+sent_posts_cache = {}  # {subreddit: set(post_ids)}
 
-@bot.command()
-async def red(ctx, subreddit: str = "subreddit", media_type: str = None, nsfw: bool = False):
-    global reddit
+def filter_posts(posts, fmt):
+    if fmt == "image":
+        return [
+            post for post in posts
+            if hasattr(post, "url") and post.url.lower().endswith((".jpg", ".jpeg", ".png"))
+        ]
+    elif fmt == "video":
+        return [
+            post for post in posts
+            if hasattr(post, "url") and post.url.lower().endswith((".mp4", ".webm", ".gifv", ".gif")) or "v.redd.it" in post.url
+        ]
+    else:  # any
+        return [
+            post for post in posts
+            if hasattr(post, "url") and post.url.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".mp4", ".webm", ".gifv")) or "v.redd.it" in post.url
+        ]
+
+async def send_reddit_media(ctx, subreddit: str = "all", fmt: str = "any"):
     if reddit is None:
-        await ctx.send("Reddit client not ready yet, please try again later.")
+        await ctx.send("Reddit client not ready yet.")
         return
 
-    # Check if the subreddit is marked as NSFW and if the channel allows it
-    if nsfw:
-        # Only allow NSFW content in guild channels that are marked NSFW
-        if not isinstance(ctx.channel, discord.TextChannel) or not ctx.channel.is_nsfw():
-            await ctx.send("This channel is not marked as NSFW. NSFW content can only be requested in age-restricted channels.")
-            return
-
-
     try:
-        subreddit_obj = await reddit.subreddit(subreddit)
-        posts = [post async for post in subreddit_obj.hot(limit=100)]
-
-        filtered_posts = []
-        for post in posts:
-            url = post.url.lower()
-
-            # Enforce NSFW preference
-            if (not nsfw and post.over_18) or (nsfw and not post.over_18):
-                continue
-
-            if media_type == "image" and url.endswith((".jpg", ".jpeg", ".png", ".webp", ".webm")):
-                filtered_posts.append(post)
-            elif media_type == "gif" and url.endswith(".gif"):
-                filtered_posts.append(post)
-            elif media_type == "video" and post.is_video:
-                filtered_posts.append(post)
-            elif media_type is None:
-                if post.is_video or hasattr(post, 'gallery_data') or url.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
-                    filtered_posts.append(post)
-
-        if not filtered_posts:
-            await ctx.send(f"No matching media found in r/{subreddit}.")
-            return
-
-        chosen = random.choice(filtered_posts)
-        embed = discord.Embed(title=chosen.title, url=chosen.url, color=discord.Color.orange())
-        embed.set_footer(text=f"From r/{subreddit} | 👍 {chosen.score} | 💬 {chosen.num_comments}")
-
-        if chosen.is_video:
-            video_url = chosen.media["reddit_video"]["fallback_url"]
-            embed.description = f"[Video Link]({video_url})\n*Videos can't be embedded in Discord.*"
-            embed.set_image(url=chosen.thumbnail if chosen.thumbnail.startswith("http") else discord.Embed.Empty)
-        elif hasattr(chosen, 'gallery_data'):
-            ids = [item['media_id'] for item in chosen.gallery_data['items']]
-            meta = chosen.media_metadata
-            if meta and ids:
-                img_url = meta[ids[0]]['s']['u'].replace('&amp;', '&')
-                embed.set_image(url=img_url)
-        else:
-            embed.set_image(url=chosen.url)
-
-        await ctx.send(embed=embed)
+        sub = await reddit.subreddit(subreddit, fetch=True)
+        posts = [post async for post in sub.hot(limit=50)]
     except Exception as e:
-        await ctx.send(f"Error fetching from Reddit: {e}")
+        await ctx.send(f"Could not fetch subreddit: {e}")
+        return
+
+    is_nsfw_channel = getattr(ctx.channel, "is_nsfw", lambda: False)()
+    is_dm = isinstance(ctx.channel, discord.DMChannel)
+    if getattr(sub, "over18", False) and not (is_nsfw_channel or is_dm):
+        await ctx.send("NSFW content can only be sent in NSFW channels or DMs.")
+        return
+
+    # Filter by format
+    media_posts = filter_posts(posts, fmt)
+
+    # Caching: skip posts already sent
+    cache = sent_posts_cache.setdefault(subreddit, set())
+    unsent_posts = [post for post in media_posts if post.id not in cache]
+
+    if not unsent_posts:
+        await ctx.send("No new matching media found in that subreddit.")
+        return
+
+    post = random.choice(unsent_posts)
+    cache.add(post.id)
+    # Optional: limit cache size
+    if len(cache) > 200:
+        cache.pop()
+
+    await ctx.send(post.url)
+
+@bot.command()
+async def red(ctx, subreddit: str = "all"):
+    await send_reddit_media(ctx, subreddit)
 
 @bot.command()
 async def sava(ctx, *, user: discord.User = None):
@@ -869,7 +771,7 @@ async def cleardm(ctx, amount: int = 5):
             deleted_count += 1
             if deleted_count >= amount:
                 break
-    await ctx.send(f"Deleted {deleted_count} messages I sent in this DM.", delete_after=5)
+    await ctx.send(f"Deleted {deleted_count} messages I sent in this DM.", delete_after=1)
 
 @bot.command()
 async def say(ctx, *, message):
@@ -976,7 +878,8 @@ async def daily(ctx):
 @bot.command()
 async def github(ctx):
     """Sends the GitHub repo link for the bot."""
-    await ctx.send("Check out the bot's GitHub [here](https://github.com/hexxedspider/kira-and-enigami)")
+    await ctx.send("[GitHub](https://github.com/hexxedspider/kira-and-enigami)")
+
 @bot.command()
 async def nsfw(ctx):
     """"Sends a secret message when the user types .nsfw."""
@@ -1299,9 +1202,21 @@ async def adminpanel(ctx):
     await ctx.message.delete()  # Optional: delete their command message
 
 @bot.command()
-@commands.has_permissions(administrator=True)
-async def money(ctx, member: discord.Member, amount: int):
+async def money(ctx, member: discord.User, amount: int):
     """Gives a specified amount of money to a member."""
+    OWNER_ID = int(OWNID)  # Make sure OWNID is an int
+
+    # In a server: only admins or you can use
+    if ctx.guild:
+        if not ctx.author.guild_permissions.administrator and ctx.author.id != OWNER_ID:
+            await ctx.send("You do not have permission to use this command in servers.")
+            return
+    # In DMs: only you can use
+    else:
+        if ctx.author.id != OWNER_ID:
+            await ctx.send("You do not have permission to use this command in DMs.")
+            return
+
     user_id = str(member.id)
     if amount <= 0:
         await ctx.send("Please enter a valid amount to give.")
@@ -1311,9 +1226,6 @@ async def money(ctx, member: discord.Member, amount: int):
     new_wallet = data["wallet"] + amount
     set_full_balance(user_id, new_wallet, data["bank"])
     await ctx.send(f"Gave ${amount} to {member.mention}. New wallet balance: ${new_wallet}.")
-
-from discord.ext import commands
-import time
 
 # Cooldown tracking (in-memory, resets on bot restart)
 bailout_timestamps = {}
@@ -1673,28 +1585,13 @@ async def invest(ctx, amount: int):
     await ctx.send(f"You invested ${amount}. You now have ${new_wallet} in your wallet.")
 
     # Start async timer
-    task = bot.loop.create_task(complete_investment(ctx, user_id, amount, start_time))
+    task = bot.loop.create_task(complete_investment(ctx, user_id, amount))  # <-- FIXED LINE
     investments[user_id] = {"task": task, "start_time": start_time, "duration": 300}
-
-async def complete_investment(ctx, user_id, amount, start_time):
-    now = time.time()
-    elapsed = now - start_time
-    remaining = max(0, 300 - elapsed)
-    await asyncio.sleep(remaining)
-
-    profit = int(amount * 1.2)
-    updated = get_full_balance(user_id)
-    set_full_balance(user_id, updated["wallet"] + profit, updated["bank"])
-
-    db.table("investments").remove(User.id == user_id)
-    investments.pop(user_id, None)
-
-    await ctx.send(f"{ctx.author.mention}, your ${amount} investment has grown to ${profit}!")
 
 @bot.command()
 async def timeinvest(ctx):
     user_id = str(ctx.author.id)
-    inv = db.table("investments").get(User.id == user_id)
+    inv = investments_table.get(User.id == user_id)
     if not inv:
         await ctx.send("You don't have any active investments right now.")
         return
@@ -1705,34 +1602,73 @@ async def timeinvest(ctx):
 
     await ctx.send(f"Your investment will complete in {minutes}m {seconds}s.")
 
+async def complete_investment(ctx, user_id, amount):
+    await asyncio.sleep(300)
+    profit = int(amount * 1.2)
+
+    updated = get_full_balance(user_id)
+    set_full_balance(user_id, updated["wallet"] + profit, updated["bank"])
+    investments_table.remove(User.id == user_id)
+    investments.pop(user_id, None)
+
+    try:
+        if ctx is not None:
+            await ctx.send(f"{ctx.author.mention}, your ${amount} investment has grown to ${profit}!")
+        else:
+            user = bot.get_user(int(user_id))
+            if user:
+                await user.send(f"While I was offline, your ${amount} investment matured into ${profit}!")
+    except Exception as e:
+        print(f"[Investment] Could not notify user {user_id}: {e}")
+
+@bot.command()
+async def cinv(ctx):
+    user_id = str(ctx.author.id)
+    investments_table.remove(User.id == user_id)
+    await ctx.send("Your investment record has been cleared.")
+
+async def complete_investment_on_restart(user_id, amount, remaining):
+    await asyncio.sleep(remaining)
+    # You may need to get a context or channel to send a message
+    # For now, just call your existing completion logic
+    await complete_investment(None, user_id, amount)
+
+async def complete_investment_offline(user_id, amount):
+    # Call your completion logic directly (no waiting)
+    await complete_investment(None, user_id, amount)
+
 @bot.event
 async def on_ready():
-    print(f"Bot logged in as {bot.user}")
-    now = time.time()
+    global reddit
+    if reddit is None:
+        reddit = asyncpraw.Reddit(
+            client_id="SpJjzgRg0fUK8TKAmGsWdw",
+            client_secret="B88RbmU0BQ7dRc2LC1_3cGYeHbc3dw",
+            user_agent="DiscordBot by u/suicidespiders"
+        )
+    print(f"Logged in as {bot.user}")
+    apply_bank_interest.start()
 
-    for inv in db.table("investments").all():
+# Restore investment timers after restart
+    for inv in investments_table.all():
         user_id = inv["id"]
         amount = inv["amount"]
         start_time = inv["start_time"]
+        duration = 300  # 5 minutes, adjust if needed
 
-        elapsed = now - start_time
-        remaining = 300 - elapsed
-
-        if remaining <= 0:
-            # Auto-complete investment
-            profit = int(amount * 1.2)
-            updated = get_full_balance(user_id)
-            set_full_balance(user_id, updated["wallet"] + profit, updated["bank"])
-            db.table("investments").remove(User.id == user_id)
-            user = bot.get_user(int(user_id))
-            if user:
-                try:
-                    await user.send(f"While I was offline, your ${amount} investment matured into ${profit}!")
-                except:
-                    pass
+        elapsed = time.time() - start_time
+        remaining = duration - elapsed
+        if remaining > 0:
+            # Restart the timer for the remaining time
+            task = bot.loop.create_task(complete_investment_on_restart(user_id, amount, remaining))
+            investments[user_id] = {"task": task, "start_time": start_time, "duration": duration}
         else:
-            task = bot.loop.create_task(complete_investment(None, user_id, amount, start_time))
-            investments[user_id] = {"task": task, "start_time": start_time, "duration": 300}
+            # Investment should have completed while bot was offline
+            await complete_investment_offline(user_id, amount)
+
+@bot.command()
+async def kbsc(ctx):
+    await ctx.send("[directly download kirabiter source code (bot1.py, will be potentially broken for not having related json files).](https://raw.githubusercontent.com/hexxedspider/kira-and-enigami/refs/heads/master/bot1.py)")
 
 # runs the bot with the token from the .env file
 bot.run(BOT1)

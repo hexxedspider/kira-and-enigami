@@ -501,12 +501,16 @@ def filter_posts(posts, fmt):
     elif fmt == "video":
         return [
             post for post in posts
-            if hasattr(post, "url") and post.url.lower().endswith((".mp4", ".webm", ".gifv", ".gif")) or "v.redd.it" in post.url
+            if hasattr(post, "url") and (
+                post.url.lower().endswith((".mp4", ".webm", ".gifv")) or "v.redd.it" in post.url
+            )
         ]
     else:  # any
         return [
             post for post in posts
-            if hasattr(post, "url") and post.url.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".mp4", ".webm", ".gifv")) or "v.redd.it" in post.url
+            if hasattr(post, "url") and (
+                post.url.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".mp4", ".webm", ".gifv")) or "v.redd.it" in post.url
+            )
         ]
 
 async def send_reddit_media(ctx, subreddit: str = "all", fmt: str = "any"):

@@ -17,13 +17,19 @@ import asyncio
 from types import SimpleNamespace
 import dateutil.parser
 import threading
+import pytz
+import ast
+import operator
+import urllib.parse
 
-# force working directory to script's folder
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 #db.json stores shit
-db = TinyDB("db.json")  # Now in root directory
+db = TinyDB("db.json")  
 users = Query()
+marriages_table = db.table("marriages")
+pending_proposals = {} 
+vows_table = db.table("vows")
 
 # actually grabbing the token from the .env file
 load_dotenv()
@@ -35,6 +41,7 @@ REPORT_CHANNEL_ID = os.getenv("REPORT_CHANNEL_ID")
 REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
 REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT")
+REPORT_CHANNEL_ID = os.getenv("REPORT_CHANNEL_ID")
 
 # intents are basic permissions that the bot needs to function
 # e.g. intents.message_content allows the bot to read the content of messages
@@ -234,7 +241,7 @@ async def help(ctx):
     embed4.add_field(name=".daily", value="Gives a daily bonus of 100.", inline=True)
     embed4.add_field(name=".say", value="Forces the bot to say your message in the same channel, and it deletes your original message.", inline=True)
     embed4.add_field(name=".github", value="Sends a link to the bot's github (all three are in the repo').", inline=True)
-    embed4.add_field(name=".invest", value="Returns money you put in at a 1.2x return after 5 minutes/")
+    embed4.add_field(name=".", value="Returns money you put in at a 1.2x return after 5 minutes/")
 
     embed5 = discord.Embed(
     title="Help Page 5",
@@ -282,15 +289,63 @@ async def help(ctx):
         color=discord.Color.blurple()
 )
     embed8.set_footer(text=f"This menu disables in 60 seconds.")
-    embed8.add_field(name=".timeinvest", value="Shows how much longer until .invest finishes.")
+    embed8.add_field(name=".report", value="Sends a message to a specified channel.")
     embed8.add_field(name=".kbsc", value="Directly download this bot's source code (may be broken, python file only).")
     embed8.add_field(name=".heist", value="Start a heist! Explained upon use, along with the Heist Guardian role.", inline=True)
     embed8.add_field(name=".joinheist", value="Join the ongoing heist.", inline=True)
     embed8.add_field(name=".leaveheist", value="Leave the heist you're in.", inline=True)
-    embed8.add_field(name=".heistcrew", value="Show's your current crew, containing highest role, money, pfp, and name.", inline=True)
+    embed8.add_field(name=".heistcrew", value="Shows your current crew, containing highest role, money, pfp, and name.", inline=True)
 
-# Create the view with embeds
-    view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6, embed7, embed8])
+    embed9 = discord.Embed(
+        title="Help Page 9",
+        description="Fun & Info Commands",
+        color=discord.Color.blurple()
+)
+    embed9.set_footer(text=f"This menu disables in 60 seconds.")
+    embed9.add_field(name=".taginfo", value="Shows info about a role you have.", inline=True)
+    embed9.add_field(name=".compliment", value="Sends a random compliment.", inline=True)
+    embed9.add_field(name=".remindme", value="Sends a reminder of your choosing.", inline=True)
+    embed9.add_field(name=".event", value="Shows the current event.", inline=True)
+    embed9.add_field(name=".roast", value="Sends a random roast.", inline=True)
+    embed9.add_field(name=".slots", value="Play slots. Simple.", inline=True)
+
+    embed10 = discord.Embed(
+    title="Help Page 10",
+    description="Game & Meme Commands",
+    color=discord.Color.blurple()
+)
+    embed10.set_footer(text=f"This menu disables in 60 seconds.")
+
+    embed10.add_field(name=".hangman", value="Start a game of hangman. Guess with `.guess <letter>`.", inline=True)
+    embed10.add_field(name=".guess", value="Submit a letter guess for your hangman game.", inline=True)
+    embed10.add_field(name=".tictactoe", value="Challenge someone to a game of Tic-Tac-Toe. Mention them after typing .tictactoe.", inline=True)
+    embed10.add_field(name=".place", value="Place your X or O in the Tic-Tac-Toe board.", inline=True)
+    embed10.add_field(name=".owoify", value="Converts your text into cute OwO speak.", inline=True)
+    embed10.add_field(name=".mock", value="Reformats your text into a mocking tone.", inline=True)
+
+    embed11 = discord.Embed(
+        title="Help - Commands 1 to 6",
+        description="Here are some of the bot commands:",
+        color=discord.Color.blue()
+)
+    embed11.add_field(name=".time", value="Show current time in your timezone.", inline=False)
+    embed11.add_field(name=".timezone", value="Set or view your timezone.", inline=False)
+    embed11.add_field(name=".lyrics", value="Get lyrics of a song.", inline=False)
+    embed11.add_field(name=".calc", value="Calculate a math expression.", inline=False)
+    embed11.add_field(name=".kill", value="Rather line along killing someone.", inline=False)
+    embed11.add_field(name=".connect4", value="Play Connect4 against someone.", inline=False)
+    
+    embed12 = discord.Embed(
+        title="Help - Commands 7 to 12",
+        description="More bot commands:",
+        color=discord.Color.blue()
+    )
+    embed12.add_field(name=".marry", value="Marry another user.", inline=False)
+    embed12.add_field(name=".divorce", value="Divorce your spouse.", inline=False)
+    embed12.add_field(name=".marriages", value="View all marriages.", inline=False)
+    embed12.add_field(name=".propose", value="Propose marriage to someone.", inline=False)
+    
+    view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6, embed7, embed8, embed9, embed10, embed11, embed12])
     await ctx.send(embed=embed1, view=view)
 
 @bot.command()
@@ -316,7 +371,7 @@ async def uinfcmd(ctx):
     await ctx.send(embed=embed)
 @bot.command()
 async def dminfo(ctx, member: discord.Member = None):
-    member = member or ctx.author  # Default to the person who ran the command
+    member = member or ctx.author
 
     embed = discord.Embed(
         title=f"User Info: {member}",
@@ -383,7 +438,7 @@ async def on_message(message):
             "wsp?", "wsp", "hey", "helloo", "hi", "yo", "LEAVE ME ALONE", "SHUT THE FUCK UP", "don't bother me",
             "what you trynna get into?", "leave me alone", "yea mane?", "don't speak my name",
             "you sound better when you're not talking", "please be quiet", "god you sound obnoxious", "yes honey?", "yes my darling?",
-            "dont take my compliments to heart, im forced to say it.",
+            "dont take my compliments to heart, im forced to say it.", "trust me, i dont want to talk to you", "you in specific piss me off",
             "just came back from coolville, they ain't know you", "want to go down the slide with me?", "want to go on the swings? the playground's empty.",
             "just came back from coolville, they said you're the mayor", "lowkey dont know what im doing give me a sec", ".help is NOT my name, try again",
             "hold on im shoving jelly beans up my ass", "cant talk, im at the doctors, but tell me why they said i need to stop letting people finish in me ??"
@@ -391,7 +446,7 @@ async def on_message(message):
             "im at the dentist rn but they said i need to stop doing oral ??", "the aliens are coming, hide", "im coming, hide", "how the fuck does this thing work?"
             "i cnat fiind my glases, 1 sec", "i difnt fnid my glasess", "holy fuck shut up", "do you ever be quiet?", "will you die if you stop talking?", "yeah?", "what?",
             "i felt lonely for a long time, but then i bought a jetski", "Kirabiter, coming to a server near you soon!", "this is a secret!", "use .nsfw for a secret :P",
-            "ay im at the chiropracters rn, but she told me i have to stop taking backshots, give me a sec",
+            "ay im at the chiropracters rn, but she told me i have to stop taking backshots, give me a sec", "SOMEONE HELP ME", "ew"
         ]
         await message.reply(random.choice(greetings))
 
@@ -1884,8 +1939,6 @@ async def taginfo(ctx, *, item_name: str):
     embed.add_field(name="Sellable", value="Yes" if item.get('sellable', False) else "No", inline=True)
     await ctx.send(embed=embed)
 
-REPORT_CHANNEL_ID = (REPORT_CHANNEL_ID)  # in env
-
 @bot.command()
 async def report(ctx, user: discord.Member, *, reason: str):
     channel = bot.get_channel(REPORT_CHANNEL_ID)
@@ -2065,6 +2118,7 @@ async def complete_investment(ctx, user_id):
         print(f"[Investment] Could not notify user {user_id}: {e}")
 
 @bot.command()
+@commands.has_permissions(administrator=True)
 async def cinv(ctx):
     user_id = str(ctx.author.id)
     investments_table.remove(User.id == user_id)
@@ -2187,5 +2241,317 @@ async def withdraw(ctx, amount: int):
 
     await ctx.send(f"Withdrew ${amount} from your bank.")
 
-# runs the bot with the token from the .env file
+hangman_games = {}
+
+@bot.command()
+async def hangman(ctx):
+    words = ['python', 'discord', 'words', 'developer', 'hangman', 'vixon']
+    word = random.choice(words)
+    display = ['_'] * len(word)
+    hangman_games[ctx.author.id] = {"word": word, "display": display, "guessed": []}
+
+    await ctx.send(f"Hangman started! Word: {' '.join(display)}\nGuess a letter using `.guess <letter>`")
+
+@bot.command()
+async def guess(ctx, letter: str):
+    game = hangman_games.get(ctx.author.id)
+    if not game:
+        await ctx.send("You haven't started a hangman game. Use `.hangman`.")
+        return
+    
+    if letter in game['guessed']:
+        await ctx.send("You've already guessed that letter.")
+        return
+
+    game['guessed'].append(letter)
+    word = game['word']
+    display = game['display']
+
+    if letter in word:
+        for i, char in enumerate(word):
+            if char == letter:
+                display[i] = letter
+        await ctx.send(f"Correct! {' '.join(display)}")
+    else:
+        await ctx.send(f"Wrong! {' '.join(display)}")
+
+    if "_" not in display:
+        await ctx.send(f"You won! The word was **{word}**.")
+        hangman_games.pop(ctx.author.id)
+
+tictactoe_games = {}
+
+@bot.command()
+async def tictactoe(ctx, opponent: discord.Member):
+    if ctx.author.id == opponent.id:
+        await ctx.send("You can't play against yourself!")
+        return
+
+    board = [":white_large_square:" for _ in range(9)]
+    game_id = f"{ctx.author.id}_{opponent.id}"
+    tictactoe_games[game_id] = {
+        "players": [ctx.author, opponent],
+        "turn": 0,
+        "board": board
+    }
+
+    await ctx.send(f"Tic-Tac-Toe started between {ctx.author.mention} and {opponent.mention}!\nUse `.place <1-9>` to play.\n{display_board(board)}")
+
+def display_board(board):
+    return "\n".join(["".join(board[i:i+3]) for i in range(0, 9, 3)])
+
+@bot.command()
+async def place(ctx, pos: int):
+    for game_id, game in tictactoe_games.items():
+        if ctx.author in game["players"]:
+            board = game["board"]
+            if board[pos - 1] != ":white_large_square:":
+                await ctx.send("That spot is already taken.")
+                return
+
+            symbol = ":regional_indicator_x:" if game["players"][game["turn"]] == ctx.author else ":o2:"
+            board[pos - 1] = symbol
+            game["turn"] ^= 1
+
+            await ctx.send(display_board(board))
+            return
+
+    await ctx.send("You're not in a game right now.")
+
+@bot.command()
+async def owoify(ctx, *, text: str):
+    owo_text = (
+        text.replace("r", "w")
+            .replace("l", "w")
+            .replace("R", "W")
+            .replace("L", "W")
+    )
+    faces = [";;w;;", "owo", "UwU", ">w<", "^w^"]
+    owo_text += f" {random.choice(faces)}"
+    await ctx.send(owo_text)
+
+@bot.command()
+async def mock(ctx, *, text: str):
+    mocked = ''.join(c.upper() if i % 2 else c.lower() for i, c in enumerate(text))
+    await ctx.send(mocked)
+
+@bot.command()
+async def timezone(ctx, location: str):
+    try:
+        tz = pytz.timezone(location.replace(" ", "_"))
+        now = datetime.now(tz)
+        await ctx.send(f"The current time in {location} is {now.strftime('%Y-%m-%d %H:%M:%S')}")
+    except Exception:
+        await ctx.send("Invalid location. Try using a city like `America/New_York`.")
+
+@bot.command()
+async def lyrics(ctx, *, song: str):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.lyrics.ovh/v1/Unknown/{song}") as resp:
+            data = await resp.json()
+            lyrics = data.get("lyrics", None)
+            if lyrics:
+                await ctx.send(lyrics[:2000])
+            else:
+                await ctx.send("Lyrics not found.")
+
+@bot.command()
+async def calc(ctx, *, expr: str):
+    allowed = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv}
+    
+    def eval_expr(node):
+        if isinstance(node, ast.BinOp) and type(node.op) in allowed:
+            return allowed[type(node.op)](eval_expr(node.left), eval_expr(node.right))
+        elif isinstance(node, ast.Num):
+            return node.n
+        raise ValueError("Unsupported expression")
+
+    try:
+        tree = ast.parse(expr, mode='eval')
+        result = eval_expr(tree.body)
+        await ctx.send(f"Result: {result}")
+    except:
+        await ctx.send("Invalid or unsupported expression.")
+
+import random
+
+@bot.command()
+async def kill(ctx, user: discord.Member):
+    methods = [
+        f"{ctx.author.mention} gave {user.mention} a nasty patty. ew.",
+        f"{ctx.author.mention} pushed {user.mention} and made them snap their neck.",
+        f"{user.mention} died of a unknown cause... uh.. watch out for {ctx.author.mention}, okay?."
+    ]
+    await ctx.send(random.choice(methods))
+
+@bot.command()
+async def marry(ctx, user: discord.Member):
+    if ctx.author.id == user.id:
+        return await ctx.send("You can't marry yourself, or your hand.")
+
+    marriages = db.table("marriages")
+    QueryObj = Query()
+
+    if marriages.contains(QueryObj.user_id == str(ctx.author.id)) or marriages.contains(QueryObj.spouse_id == str(ctx.author.id)):
+        return await ctx.send("You're already married.")
+
+    if marriages.contains(QueryObj.user_id == str(user.id)) or marriages.contains(QueryObj.spouse_id == str(user.id)):
+        return await ctx.send(f"{user.display_name} is already married to someone else.")
+
+    marriages.insert({"user_id": str(ctx.author.id), "spouse_id": str(user.id)})
+    await ctx.send(f"{ctx.author.mention} and {user.mention} are now married! Congratulations!")
+
+@bot.command()
+async def divorce(ctx):
+    marriages = db.table("marriages")
+    QueryObj = Query()
+
+    entry = marriages.get((QueryObj.user_id == str(ctx.author.id)) | (QueryObj.spouse_id == str(ctx.author.id)))
+    if not entry:
+        return await ctx.send("You're not married to anyone.")
+
+    marriages.remove(doc_ids=[entry.doc_id])
+    await ctx.send("You are now divorced.")
+
+@bot.command()
+async def marriages(ctx):
+    marriages = db.table("marriages")
+    if len(marriages) == 0:
+        return await ctx.send("No one is married yet.")
+
+    embed = discord.Embed(
+        title="Server Marriages",
+        color=discord.Color.pink()
+    )
+
+    for entry in marriages:
+        user1 = ctx.guild.get_member(int(entry['user_id']))
+        user2 = ctx.guild.get_member(int(entry['spouse_id']))
+        name1 = user1.display_name if user1 else f"<@{entry['user_id']}>"
+        name2 = user2.display_name if user2 else f"<@{entry['spouse_id']}>"
+        embed.add_field(name=f"{name1} 💞 {name2}", value="\u200b", inline=False)
+
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def propose(ctx, user: discord.Member):
+    if ctx.author.id == user.id:
+        return await ctx.send("You can't propose to yourself.")
+
+    QueryObj = Query()
+    if marriages_table.contains((QueryObj.user_id == str(ctx.author.id)) | (QueryObj.spouse_id == str(ctx.author.id))):
+        return await ctx.send("You're already married.")
+    if marriages_table.contains((QueryObj.user_id == str(user.id)) | (QueryObj.spouse_id == str(user.id))):
+        return await ctx.send(f"{user.display_name} is already married .")
+
+    if user.id in pending_proposals:
+        return await ctx.send(f"{user.mention} already has a pending proposal.")
+
+    pending_proposals[user.id] = ctx.author.id
+    await ctx.send(f"💍 {ctx.author.mention} has proposed to {user.mention}! Type `.acceptproposal` or `.rejectproposal`.")
+
+@bot.command()
+async def acceptproposal(ctx):
+    proposer_id = pending_proposals.get(ctx.author.id)
+    if not proposer_id:
+        return await ctx.send("You have no pending proposals.")
+
+    proposer = ctx.guild.get_member(proposer_id)
+    if not proposer:
+        return await ctx.send("Could not find the proposer in this server.")
+
+    accepter_vow_entry = vows_table.get(Query().user_id == str(ctx.author.id))
+    proposer_vow_entry = vows_table.get(Query().user_id == str(proposer_id))
+
+    marriages_table.insert({
+        "user_id": str(proposer_id),
+        "spouse_id": str(ctx.author.id),
+        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "proposer_vow": proposer_vow_entry["vow"] if proposer_vow_entry else "No vow provided.",
+        "accepter_vow": accepter_vow_entry["vow"] if accepter_vow_entry else "No vow provided."
+    })
+
+    del pending_proposals[ctx.author.id]
+    await ctx.send(f"{ctx.author.mention} and {proposer.mention} are now married! 💍")
+
+@bot.command()
+async def rejectproposal(ctx):
+    proposer_id = pending_proposals.get(ctx.author.id)
+    if not proposer_id:
+        return await ctx.send("You have no pending proposals.")
+
+    proposer = ctx.guild.get_member(proposer_id)
+    del pending_proposals[ctx.author.id]
+    await ctx.send(f"{ctx.author.mention} rejected the proposal from {proposer.mention}.")
+
+@bot.command()
+async def marriageinfo(ctx, user: discord.Member = None):
+    user = user or ctx.author
+    QueryObj = Query()
+    entry = marriages_table.get((QueryObj.user_id == str(user.id)) | (QueryObj.spouse_id == str(user.id)))
+
+    if not entry:
+        return await ctx.send(f"{user.display_name} is not married ")
+
+    spouse_id = entry['spouse_id'] if str(user.id) == entry['user_id'] else entry['user_id']
+    spouse = ctx.guild.get_member(int(spouse_id))
+    spouse_name = spouse.display_name if spouse else f"<@{spouse_id}>"
+    date = datetime.datetime.fromisoformat(entry['timestamp']).strftime("%B %d, %Y")
+
+    embed = discord.Embed(
+        title="Marriage Info",
+        description=f"{user.mention} is married to {spouse_name}",
+        color=discord.Color.magenta()
+    )
+    proposer_vow = entry.get("proposer_vow", "No vow.")
+    accepter_vow = entry.get("accepter_vow", "No vow.")
+
+    embed.add_field(name="Their Vows", value=f"**{user.display_name}**'s vow:\n*{proposer_vow if str(user.id) == entry['user_id'] else accepter_vow}*", inline=False)
+    embed.add_field(name="Married Since", value=date)
+    vow = entry.get('vow', "No vow provided.")
+    embed.add_field(name="Vow", value=vow, inline=False)
+
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def vowedit(ctx, *, vow: str):
+    vows_table.upsert({"user_id": str(ctx.author.id), "vow": vow}, Query().user_id == str(ctx.author.id))
+    await ctx.send(f"Your vow has been saved! 💖\n*{vow}*")
+
+@bot.command()
+async def viewvow(ctx, user: discord.Member = None):
+    user = user or ctx.author
+    entry = marriages_table.get((Query().user_id == str(user.id)) | (Query().spouse_id == str(user.id)))
+
+    if not entry:
+        return await ctx.send(f"{user.display_name} is not married.")
+
+    if str(user.id) == entry["user_id"]:
+        vow = entry.get("proposer_vow", "No vow.")
+    else:
+        vow = entry.get("accepter_vow", "No vow.")
+
+    embed = discord.Embed(
+        title=f"{user.display_name}'s Vow",
+        description=f"*{vow}*",
+        color=discord.Color.blurple()
+    )
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def vowremove(ctx):
+    user_id = str(ctx.author.id)
+
+    if vows_table.contains(Query().user_id == user_id):
+        vows_table.remove(Query().user_id == user_id)
+
+    marriage = marriages_table.get((Query().user_id == user_id) | (Query().spouse_id == user_id))
+    if marriage:
+        if str(user_id) == marriage["user_id"]:
+            marriages_table.update({"proposer_vow": "No vow."}, doc_ids=[marriage.doc_id])
+        else:
+            marriages_table.update({"accepter_vow": "No vow."}, doc_ids=[marriage.doc_id])
+
+    await ctx.send("Your vow has been removed. You can set a new one with `.vowedit`.")
+
 bot.run(BOT1)

@@ -1,8 +1,11 @@
 .env
 db.json
 .gitignore
-.\vscode
+**/vscode
 command_log_1.txt
 command_log_2.txt
 command_log_3.txt
 kirabiter.code-workspace
+**/helpme
+**/stash
+**/stashex

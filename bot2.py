@@ -726,6 +726,4 @@ async def tbib(ctx, *, tags: str = None):
 
         await ctx.send(embed=embed)
 
-
-# Run the bot
 bot.run(BOT2)

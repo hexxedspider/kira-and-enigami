@@ -1,0 +1,48 @@
+{
+    "active_event": "summer_bash",
+    "events": {
+        "summer_bash": {
+            "title": "Summer Bash",
+            "description": "Enjoy summer bonuses across all games!",
+            "color": "gold",
+            "fields": [
+                {
+                    "name": "Boosts",
+                    "value": "+2x Daily Bonus\n+10% Heist Success Rate\nNew Summer Items in .shop!",
+                    "inline": false
+                },
+                {
+                    "name": "Ends",
+                    "value": "June 30, 2025",
+                    "inline": true
+                }
+            ],
+            "footer": "Don't miss out!",
+            "effects": {
+                "daily_multiplier": 2.0,
+                "heist_bonus_chance": 0.10,
+                "heist_reward_multiplier": 1.0,
+                "shop_tag_override": "summer"
+            }
+        },
+        "double_money_weekend": {
+            "title": "Double Money Weekend",
+            "description": "Earn 2x from all games!",
+            "color": "green",
+            "fields": [
+                {
+                    "name": "Duration",
+                    "value": "All weekend long!",
+                    "inline": false
+                }
+            ],
+            "footer": "Event ends Sunday night.",
+            "effects": {
+                "daily_multiplier": 2.0,
+                "heist_reward_multiplier": 2.0,
+                "gamble_multiplier": 2.0,
+                "rps_multiplier": 2.0
+            }
+        }
+    }
+}

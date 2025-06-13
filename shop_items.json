@@ -1,8 +1,11 @@
 {
-    "vip": {"price": 1000, "role_name": "VIP", "sellable": true},
-    "elite": {"price": 2500, "role_name": "Elite", "sellable": true},
-    "god": {"price": 5000, "role_name": "God", "sellable": true},
-    "immortal": {"price": 10000, "role_name": "Immortal", "sellable": true},
-    "true one": {"price": 25000, "role_name": "True One", "sellable": true},
-    "gambler": {"price": 50000, "role_name": "Gambler", "sellable": true}
+    "VIP": {"price": 1000, "role_name": "VIP", "sellable": true},
+    "Show Off": {"price": 2500, "role_name": "Elite", "sellable": true},
+    "Money Maker": {"price": 5000, "role_name": "God", "sellable": true},
+    "Undying": {"price": 10000, "role_name": "Immortal", "sellable": true},
+    "The One and Only": {"price": 25000, "role_name": "True One", "sellable": true},
+    "Triple 7's": {"price": 50000, "role_name": "Gambler", "sellable": true},
+    "Mask.": {"price": 10000, "role_name": "Masked", "sellable": false},
+    "Extend your mag.": {"price": 15000, "role_name": "Extended Mag", "sellable": false},
+    "Save crew in a heist.": {"price": 20000, "role_name": "Heist Guardian", "sellable": true}
 }

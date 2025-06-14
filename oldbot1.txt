@@ -1,23 +1,9 @@
-
-from tinydb import TinyDB, Query
-
-main_db = TinyDB("db.json")
-balances_table = main_db.table("balances")
-User = Query()
-
-def get_balance(user_id: str):
-    record = balances_table.get(User.user_id == user_id)
-    if not record:
-        balances_table.insert({"user_id": user_id, "wallet": 100, "bank": 0})
-        return {"wallet": 100, "bank": 0}
-    return {"wallet": record.get("wallet", 0), "bank": record.get("bank", 0)}
-
-def set_balance(user_id: str, wallet: int, bank: int):
-    if balances_table.contains(User.user_id == user_id):
-        balances_table.update({"wallet": wallet, "bank": bank}, User.user_id == user_id)
-    else:
-        balances_table.insert({"user_id": user_id, "wallet": wallet, "bank": bank})
-
+##
+## HEY
+## YES YOU
+## THIS IS THE OLD BOT FOR KIRABITER, IT HAD A LOT OF BUGS THAT SIMPLY TOOK TOO LONG TO FIX, SO I STARTED AGAIN
+## THE bot1.py IS THE NEW OLD
+##
 
 import discord
 from discord import ButtonStyle, app_commands
@@ -43,17 +29,16 @@ import ast
 import operator
 
 #db.json stores shit
-main_db = TinyDB("db.json")
-balances_table = main_db.table("balances")
-marriages_table = main_db.table("marriages")
+db = TinyDB("db.json")
+balances_table = db.table("balances")
+marriages_table = db.table("marriages")
 pending_proposals = {} 
-vows_table = main_db.table("vows")
+vows_table = db.table("vows")
 users = Query()
-investments_table = main_db.table("investments")
+investments_table = db.table("investments")
 User = Query()
+db = TinyDB('bingo_db.json')
 Bingo = Query()
-cooldowns_db = main_db.table('cooldowns')
-cf_stats = main_db.table("coinflip_stats")
 
 # actually grabbing the token from the .env file
 load_dotenv()
@@ -61,10 +46,11 @@ BOT1 = os.getenv("BOT1")
 OWNID = os.getenv("OWNID")
 FM_API = os.getenv("FM_API")
 FM_USERNAME = os.getenv("FM_USERNAME")
-REPORT_CHANNEL_ID = int(os.getenv("REPORT_CHANNEL_ID"))
+REPORT_CHANNEL_ID = os.getenv("REPORT_CHANNEL_ID")
 REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
 REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT")
+REPORT_CHANNEL_ID = os.getenv("REPORT_CHANNEL_ID")
 
 # intents are basic permissions that the bot needs to function
 # e.g. intents.message_content allows the bot to read the content of messages
@@ -73,18 +59,6 @@ intents.message_content = True  # Required to read message content
 
 # prefix, just like / but not.
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
-
-def get_user_balance(user_id: str):
-    return get_balance(user_id)
-
-def set_user_balance(user_id: str, wallet: int, bank: int):
-    set_balance(user_id, wallet, bank)
-
-def get_full_balance(user_id: str):
-    return get_balance(user_id)
-
-def set_full_balance(user_id: str, wallet: int, bank: int):
-    set_balance(user_id, wallet, bank)
 
 bot.heist_active = False
 bot.heist_players = []
@@ -109,12 +83,37 @@ def log_command(ctx):
 async def on_command(ctx):
     log_command(ctx)
 
+BALANCE_FILE = os.path.join("db.json")
+
+if not os.path.exists(BALANCE_FILE) or os.path.getsize(BALANCE_FILE) == 0:
+    with open(BALANCE_FILE, "w") as f:
+        json.dump({}, f, indent=4)
+    balances = {}
+
 investments = {}
 
 bingo_active = False
 
 # In-memory cooldown tracker, change to db.json later or something
 heist_cooldowns = {}  # {user_id: datetime}
+
+def get_full_balance(user_id: str):
+    user_data = balances.get(user_id)
+
+    if isinstance(user_data, dict) and "wallet" in user_data and "bank" in user_data:
+        return user_data
+    else:
+        # Convert old format (int balance only) to full format
+        initial_wallet = user_data if isinstance(user_data, int) else 100
+        balances[user_id] = {"wallet": max(initial_wallet, 0), "bank": 0}
+        with open(BALANCE_FILE, "w") as f:
+            json.dump(balances, f, indent=4)
+        return balances[user_id]
+
+def set_full_balance(user_id: str, wallet: int, bank: int):
+    balances[user_id] = {"wallet": max(wallet, 0), "bank": max(bank, 0)}
+    with open(BALANCE_FILE, "w") as f:
+        json.dump(balances, f, indent=4)
 
 #load shop items cause it didnt before
 SHOP_FILE = "shop_items.json"
@@ -126,11 +125,21 @@ except FileNotFoundError:
     shop_items = {}
 
 async def update_balance(user_id: int, amount: int, ctx: commands.Context = None):
-    bal = get_balance(str(user_id))
-    new_wallet = bal["wallet"] + amount
-    set_balance(str(user_id), new_wallet, bal["bank"])
+    user_key = str(user_id)
+    # Ensure user data exists
+    if user_key not in balances:
+        balances[user_key] = {"wallet": 100, "bank": 0}
 
-    if bal["wallet"] > 0 and new_wallet == 0 and ctx is not None:
+    current = balances[user_key].get("wallet", 100)
+    new_balance = max(current + amount, 0)
+    balances[user_key]["wallet"] = new_balance
+
+    # Save balances to file
+    with open(BALANCE_FILE, "w") as f:
+        json.dump(balances, f, indent=4)
+
+    # Assign bankrupt role if balance just dropped to zero
+    if current > 0 and new_balance == 0 and ctx is not None:
         await assign_bankrupt_role(ctx, user_id)
 
 async def assign_bankrupt_role(ctx, user_id):
@@ -139,6 +148,7 @@ async def assign_bankrupt_role(ctx, user_id):
     if member is None:
         return
 
+    # Find or create the role
     role_name = "Once Bankrupt"
     role = discord.utils.get(guild.roles, name=role_name)
     if role is None:
@@ -155,6 +165,25 @@ async def assign_bankrupt_role(ctx, user_id):
             await ctx.send(f"{member.mention} has gone bankrupt and earned the **{role_name}** role.")
         except discord.Forbidden:
             await ctx.send("I can't assign roles. Please check my permissions.")
+
+class HelpView(discord.ui.View):
+    def __init__(self, embeds):
+        super().__init__(timeout=60)  # Timeout after 60 seconds
+        self.embeds = embeds
+        self.current = 0
+
+    async def update_message(self, interaction):
+        await interaction.response.edit_message(embed=self.embeds[self.current], view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current = (self.current + 1) % len(self.embeds)
+        await self.update_message(interaction)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.primary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current = (self.current - 1) % len(self.embeds)
+        await self.update_message(interaction)
 
 @bot.command()
 async def invenilink(ctx):
@@ -606,7 +635,7 @@ async def sava(ctx, *, user: discord.User = None):
 
     await ctx.send(embed=embed)
 
-balances_table = main_db.table('balances')
+balances_table = db.table('balances')
 User = Query()
 
 rps_stats = defaultdict(lambda: {"wins": 0, "losses": 0, "ties": 0})
@@ -788,9 +817,10 @@ async def unmute(ctx, member: discord.Member):
 
 @bot.command()
 @commands.has_permissions(manage_messages=True)
-async def clear(ctx, amount: int = 5):
-    await ctx.channel.purge(limit=amount)
-    await ctx.send(f"Cleared {amount} messages.", delete_after=3)
+async def clear(ctx, amount: int):
+    if amount <= 0:
+        await ctx.send("Please specify a positive number of messages to delete.")
+        return
 
     try:
         deleted = await ctx.channel.purge(limit=amount + 1)  # +1 to delete the command message too
@@ -829,6 +859,15 @@ async def giverole(ctx, member: discord.Member, *, role_name: str):
     else:
         await ctx.send(f"Role '{role_name}' not found.")
 
+def set_full_balance(user_id, new_balance):
+    with open("db.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if user_id not in data or not isinstance(data[user_id], dict):
+        data[user_id] = {}
+    data[user_id]["wallet"] = new_balance
+    with open("db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
 @bot.command()
 async def balance(ctx):
     user_id = str(ctx.author.id)
@@ -858,24 +897,31 @@ async def balance(ctx):
 @bot.command()
 async def gamble(ctx, bet: int):
     user_id = str(ctx.author.id)
-    data = get_user_balance(user_id)
+    # Load user data (adjust this to your actual data loading method)
+    all_data = db.storage.read() or {}
+    user_data = all_data.get(user_id, {"wallet": 0, "bank": 0})
 
+    # Validate bet
     if bet <= 0:
         await ctx.send("Bet must be a positive amount.")
         return
 
-    if data["wallet"] < bet:
+    if user_data["wallet"] < bet:
         await ctx.send("You don't have enough money in your wallet.")
         return
 
+    # Gamble logic (50/50 win/lose)
     if random.choice([True, False]):
-        data["wallet"] += bet
-        result = f"You won! Your new wallet balance is ${data['wallet']}."
+        user_data["wallet"] += bet
+        result = f"You won! Your new wallet balance is ${user_data['wallet']}."
     else:
-        data["wallet"] -= bet
-        result = f"You lost! Your new wallet balance is ${data['wallet']}."
+        user_data["wallet"] -= bet
+        result = f"You lost! Your new wallet balance is ${user_data['wallet']}."
 
-    set_user_balance(user_id, data["wallet"], data["bank"])
+    # Save updated user data
+    all_data[user_id] = user_data
+    db.storage.write(all_data)
+
     await ctx.send(result)
 
 @bot.command()
@@ -935,25 +981,20 @@ async def acceptbet(ctx, challenger: discord.Member):
     challenger_balance = get_full_balance(challenger_id)
     accepter_balance = get_full_balance(accepter_id)
 
-    if accepter_balance["wallet"] < amount:
+    if accepter_balance < amount:
         await ctx.send("You don't have enough money to accept the coinflip.")
         return
-    if challenger_balance["wallet"] < amount:
+    if challenger_balance < amount:
         await ctx.send("The challenger no longer has enough money.")
         del pending_coinflips[challenger_id]
         return
 
-    # Deduct from both, add to winner
+    # Flip the coin
     winner_id = random.choice([challenger_id, accepter_id])
     loser_id = accepter_id if winner_id == challenger_id else challenger_id
 
-    # Remove bet from both
-    set_full_balance(challenger_id, challenger_balance["wallet"] - amount, challenger_balance["bank"])
-    set_full_balance(accepter_id, accepter_balance["wallet"] - amount, accepter_balance["bank"])
-
-    # Add winnings to winner
-    winner_balance = get_full_balance(winner_id)
-    set_full_balance(winner_id, winner_balance["wallet"] + amount * 2, winner_balance["bank"])
+    set_full_balance(winner_id, get_full_balance(winner_id) + amount)
+    set_full_balance(loser_id, get_full_balance(loser_id) - amount)
 
     del pending_coinflips[challenger_id]
 
@@ -968,8 +1009,8 @@ async def acceptbet(ctx, challenger: discord.Member):
         role_name = milestone_roles[new_wins]
         role = discord.utils.get(ctx.guild.roles, name=role_name)
 
-        if role and role not in ctx.author.roles:
-            await ctx.author.add_roles(role)
+        if role and role not in winner.roles:
+            await winner.add_roles(role)
             await ctx.send(f"{winner.mention} reached {new_wins} coinflip wins and earned the **{role_name}** role!")
 
     await ctx.send(f"Coin flipped! {winner.mention} wins ${amount} from {loser.mention}!")
@@ -1007,12 +1048,7 @@ async def pay(ctx, member: discord.Member, amount: int):
 @commands.has_permissions(administrator=True)
 async def reloadshop(ctx):
     global shop_items
-    try:
-        with open(SHOP_FILE, "r") as f:
-            shop_items = json.load(f)
-        await ctx.send("Shop items reloaded.")
-    except Exception as e:
-        await ctx.send(f"Failed to reload shop: {e}")
+    await ctx.send("Shop items reloaded from file.")
 
 @bot.command()
 async def shop(ctx):
@@ -1030,7 +1066,11 @@ async def shop(ctx):
 @bot.command()
 async def buy(ctx, item: str):
     user_id = str(ctx.author.id)
-    data = get_user_balance(user_id) 
+    data = get_user_balance(user_id)  # Always use this helper!
+
+    # Load shop items (reload from file if needed)
+    with open("shop_items.json", "r") as f:
+        shop_items = json.load(f)
 
     if item not in shop_items:
         await ctx.send("That item doesn't exist in the shop.")
@@ -1093,24 +1133,30 @@ async def sell(ctx, item: str):
     role_name = data["role_name"]
     refund = data["price"] // 2
 
+    # Find role in guild
     role = discord.utils.get(ctx.guild.roles, name=role_name)
     if not role:
         await ctx.send("The role for this item doesn't exist.")
         return
 
-    if not data.get("sellable", True):
+     # Check if it's sellable
+    if not data.get("sellable", True):  # default to True if missing
         await ctx.send("This item cannot be sold, as it's either a limited or an admin role.")
         return
 
+    # Check if user owns the role
     if role not in ctx.author.roles:
         await ctx.send("You don't own this role.")
         return
 
+    # Remove role and give refund
     await ctx.author.remove_roles(role)
     current_balance = get_full_balance(user_id)
-    set_full_balance(user_id, current_balance["wallet"] + refund, current_balance["bank"])
+    set_full_balance(user_id, current_balance + refund)
 
     await ctx.send(f"You sold **{role_name}** for ${refund}.")
+
+cf_stats = db.table("coinflip_stats")
 
 # Load milestones from JSON file
 def load_milestones():
@@ -1283,6 +1329,21 @@ async def rob(ctx, target: discord.Member):
 
         await ctx.send(f"You failed the robbery and lost $**{lost_amount}**!")
 
+def get_bank_data():
+    if not os.path.exists("mainbank.json"):
+        with open("mainbank.json", "w") as f:
+            json.dump({}, f)
+    with open("mainbank.json", "r") as f:
+        users = json.load(f)
+    return users
+
+def get_user_bank_data(user_id):
+    users = get_bank_data()
+    user_id = str(user_id)
+    if user_id not in users:
+        users[user_id] = {"wallet": 0, "bank": 0}
+    return users[user_id]
+
 # Card values for blackjack
 card_values = {
     "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
@@ -1359,10 +1420,10 @@ async def blackjack(ctx, bet: int):
             else:
                 return "You lose!"
 
-        async def update_balance(self, payout):
-            # payout is the amount to add back to wallet (0 for loss, bet for tie, bet*2 for win)
+        async def update_balance(self, amount: int):
             data = get_user_balance(self.user_id)
-            set_user_balance(self.user_id, data["wallet"] + payout, data.get("bank", 0))
+            data["wallet"] = max(data.get("wallet", 0) + amount, 0)
+            set_user_balance(self.user_id, data["wallet"], data.get("bank", 0))
 
         async def end_game(self, interaction, result_msg):
             if "win" in result_msg.lower():
@@ -1376,7 +1437,6 @@ async def blackjack(ctx, bet: int):
                 updated_data = get_user_balance(self.user_id)
                 payout_msg = f"It's a tie! Your bet of ${self.bet} was returned. You now have ${updated_data['wallet']} in your wallet."
             else:
-                # No payout for loss
                 updated_data = get_user_balance(self.user_id)
                 payout_msg = f"You lost your bet of ${self.bet}. You now have ${updated_data['wallet']} in your wallet."
 
@@ -1433,6 +1493,20 @@ async def blackjack(ctx, bet: int):
         "Hit or Stand?",
         view=view
     )
+
+def get_full_balance(user_id: str):
+    user_data = balances.get(user_id)
+    if isinstance(user_data, dict) and "wallet" in user_data and "bank" in user_data:
+        return user_data
+    else:
+        # Convert old format (int) to full format
+        initial_wallet = user_data if isinstance(user_data, int) else 100
+        balances[user_id] = {"wallet": max(initial_wallet, 0), "bank": 0}
+        return balances[user_id]
+
+async def _invest_timer(ctx, user_id, amount, duration):
+    await asyncio.sleep(duration)
+    await complete_investment(ctx, user_id, amount)
 
 async def complete_investment(ctx, user_id, amount=None):
     inv = investments_table.get(User.id == user_id)
@@ -1511,7 +1585,7 @@ async def kbsc(ctx):
 heist_active = False
 heist_players = []
 
-cooldowns_db = main_db.table('cooldowns')
+cooldowns_db = db.table('cooldowns')
 Cooldown = Query()
 
 def set_cooldown(user_id: int, command: str, duration_minutes: int):
@@ -1549,8 +1623,8 @@ def get_user_heist_bonuses(member):
         for role in member.roles:
             effect = heist_role_effects.get(role.name)
             if effect:
-                bonus_chance += effect.get("bonus_chance", 0.0)
-                reward_multiplier += effect.get("bonus_reward_multiplier", 0.0)
+                bonus_chance += effect.get("bonus_chance", 0)
+                reward_multiplier *= effect.get("bonus_reward_multiplier", 1.0)
                 role_names.append(role.name)
 
     return bonus_chance, reward_multiplier, role_names
@@ -1617,10 +1691,11 @@ async def heist(ctx):
             effect = heist_role_effects.get(role.name)
             if effect:
                 bonus_total += effect.get("bonus_chance", 0)
-                reward_multiplier += effect.get("bonus_reward_multiplier", 1.0)
+                reward_multiplier *= effect.get("bonus_reward_multiplier", 1.0)
 
     final_chance = min(1.0, base_chance + bonus_total + heist_bonus)
     reward = int(reward * reward_multiplier * heist_reward_boost)
+
 
     success = random.random() <= final_chance
 
@@ -1633,9 +1708,11 @@ async def heist(ctx):
     if success:
         share = reward // len(participants)
         for user in participants:
-            user_id = str(user.id)
-            data = get_user_balance(user_id)
-            set_user_balance(user_id, data["wallet"] + share, data["bank"])
+            db_user = db.get(users.id == user.id)
+            if db_user:
+                db.update({'wallet': db_user['wallet'] + share}, users.id == user.id)
+            else:
+                db.insert({'id': user.id, 'wallet': share, 'bank': 0})
             set_cooldown(user.id, 'heist', 30)
             try:
                 await user.send(f"You succeeded in the heist and earned **${share}**!")
@@ -1645,18 +1722,23 @@ async def heist(ctx):
         names = ", ".join(p.mention for p in participants)
         await ctx.send(f"**Success!** {names} pulled off the heist and stole **${reward}** total.")
     else:
-        share = 0  # No reward on failure
         for user in participants:
-            user_id = str(user.id)
+            db_user = db.get(users.id == user.id)
+
             if guardian and user != guardian:
-                # Guardian protects this teammate; do not change their balance
+                # guardian protects this teammate
                 try:
                     await user.send("You were caught, but your Heist Guardian protected your money.")
                 except:
                     pass
+
             elif user == guardian:
-                # Guardian sacrifices themself: lose all money
-                set_user_balance(user_id, 0, 0)
+                # guardian sacrifices themself
+                if db_user:
+                    db.update({'wallet': 0, 'bank': 0}, users.id == user.id)
+                else:
+                    db.insert({'id': user.id, 'wallet': 0, 'bank': 0})
+
                 guardian_role = discord.utils.get(user.guild.roles, name="Heist Guardian")
                 if guardian_role:
                     await user.remove_roles(guardian_role)
@@ -1665,8 +1747,11 @@ async def heist(ctx):
                     except:
                         pass
             else:
-                # No guardian involved, normal failure: lose all money
-                set_user_balance(user_id, 0, 0)
+                # No guardian involved, normal failure
+                if db_user:
+                    db.update({'wallet': 0, 'bank': 0}, users.id == user.id)
+                else:
+                    db.insert({'id': user.id, 'wallet': 0, 'bank': 0})
                 try:
                     await user.send("You were caught during the heist. All your money has been taken.")
                 except:
@@ -1679,9 +1764,9 @@ async def heist(ctx):
             await ctx.send(f"**Heist Failed!** {names} got caught, but {guardian.mention} took the fall and saved the crew.")
         else:
             await ctx.send(f"**Heist Failed!** {names} got caught and lost all their money.")
-
+        
         await ctx.send(
-            f"Final heist chance: {int(final_chance * 100)}% | Total reward: ${reward:,}")
+    f"Final heist chance: {int(final_chance * 100)}% | Total reward: ${reward:,}")
 
 @bot.command()
 async def joinheist(ctx):
@@ -1729,13 +1814,17 @@ async def heistcrew(ctx):
     embeds = []
 
     for user in bot.heist_players:
-        user_id = str(user.id)
-        data = get_user_balance(user_id)
-        total_money = data["wallet"] + data["bank"]
+        # Get money from TinyDB
+        db_user = db.get(users.id == user.id)
+        wallet = db_user.get('wallet', 0) if db_user else 0
+        bank = db_user.get('bank', 0) if db_user else 0
+        total_money = wallet + bank
 
+        # Highest role excluding @everyone
         roles = [r for r in user.roles if r.name != "@everyone"]
         highest_role = max(roles, key=lambda r: r.position) if roles else None
 
+        # Get role bonuses
         bonus_chance, reward_multiplier, bonus_roles = get_user_heist_bonuses(user)
         total_bonus_chance += bonus_chance
         total_reward_multiplier *= reward_multiplier
@@ -1753,21 +1842,24 @@ async def heistcrew(ctx):
 
         embeds.append(embed)
 
+    # Send total bonuses summary first
     await ctx.send(f"**Total Crew Bonus Chance:** {total_bonus_chance*100:.1f}%\n**Total Crew Reward Multiplier:** {total_reward_multiplier:.2f}x")
 
+    # send the
     for embed in embeds:
         await ctx.send(embed=embed)
 
 @bot.command()
 async def slots(ctx, bet: int):
     user_id = str(ctx.author.id)
-    data = get_user_balance(user_id)
+    all_data = db.storage.read() or {}
+    user_data = all_data.get(user_id, {"wallet": 0, "bank": 0})
 
     if bet <= 0:
         await ctx.send("You must bet a positive amount.")
         return
 
-    if data["wallet"] < bet:
+    if user_data["wallet"] < bet:
         await ctx.send("You don't have enough money in your wallet to place that bet.")
         return
 
@@ -1784,12 +1876,14 @@ async def slots(ctx, bet: int):
         outcome = f"You won ${payout}!"
 
     if payout > 0:
-        data["wallet"] += payout
+        user_data["wallet"] += payout
     else:
-        data["wallet"] -= bet
+        user_data["wallet"] -= bet
 
-    set_user_balance(user_id, data["wallet"], data["bank"])
-    await ctx.send(f"{' - '.join(result)}\n{outcome}\nYou now have ${data['wallet']} in your wallet.")
+    all_data[user_id] = user_data
+    db.storage.write(all_data)
+
+    await ctx.send(f"{' - '.join(result)}\n{outcome}\nYou now have ${user_data['wallet']} in your wallet.")
 
 @bot.command()
 async def roast(ctx):
@@ -1931,12 +2025,12 @@ async def daily(ctx):
 
     base_amount = 100
     multiplier = event.get("effects", {}).get("daily_multiplier", 1)
-    amount = int(base_amount * multiplier)
+    amount = int(base_amount * multiplier)  # renamed from bonus_amount
 
-    user_data = main_db.get(User.id == user_id)
+    user_data = db.get(User.id == user_id)
     if not user_data:
-        main_db.insert({"id": user_id, "last_claim": None})
-        user_data = main_db.get(User.id == user_id)
+        db.insert({"id": user_id, "last_claim": None})
+        user_data = db.get(User.id == user_id)
 
     last_claim = user_data.get("last_claim")
     if last_claim:
@@ -1956,7 +2050,7 @@ async def daily(ctx):
     new_wallet = data['wallet'] + amount
     set_full_balance(user_id, new_wallet, data['bank'])
 
-    main_db.update({"last_claim": now.isoformat()}, User.id == user_id)
+    db.update({"last_claim": now.isoformat()}, User.id == user_id)
 
     await ctx.send(f"{ctx.author.mention}, you received your daily bonus of ${amount}. Your new wallet balance is ${new_wallet}.")
 
@@ -1996,6 +2090,35 @@ async def invest(ctx, amount: int):
 async def _invest_timer(ctx, user_id, amount, duration):
     await asyncio.sleep(duration)
     await complete_investment(ctx, user_id)
+
+async def complete_investment(ctx, user_id):
+    global balances
+    try:
+        with open(BALANCE_FILE, "r") as f:
+            balances = json.load(f)
+    except Exception:
+        pass
+
+    inv = investments_table.get(User.id == user_id)
+    if not inv:
+        return
+
+    invested_amount = inv.get("amount", 0)
+    profit = int(invested_amount * 1.2)
+    updated = get_full_balance(user_id)
+    set_user_balance(user_id, updated["wallet"] + profit, updated["bank"])
+    investments_table.remove(User.id == user_id)
+    investments.pop(user_id, None)
+
+    try:
+        if ctx is not None:
+            await ctx.send(f"{ctx.author.mention}, your ${invested_amount} investment has grown to ${profit}!")
+        else:
+            user = bot.get_user(int(user_id))
+            if user:
+                await user.send(f"While I was offline, your ${invested_amount} investment matured into ${profit}!")
+    except Exception as e:
+        print(f"[Investment] Could not notify user {user_id}: {e}")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -2058,6 +2181,21 @@ async def helpme(ctx):
         await ctx.send(file=discord.File(image_path))
     except Exception as e:
         await ctx.send(f"Error sending image: {e}")
+
+def get_user_balance(user_id):
+    result = balances_table.get(User.user_id == str(user_id))
+    if result:
+        return {"wallet": result.get("wallet", 0), "bank": result.get("bank", 0)}
+    else:
+        # If user not found, create entry
+        balances_table.insert({"user_id": str(user_id), "wallet": 0, "bank": 0})
+        return {"wallet": 0, "bank": 0}
+
+def set_user_balance(user_id, wallet, bank):
+    if balances_table.contains(User.user_id == str(user_id)):
+        balances_table.update({"wallet": wallet, "bank": bank}, User.user_id == str(user_id))
+    else:
+        balances_table.insert({"user_id": str(user_id), "wallet": wallet, "bank": bank})
 
 @bot.command()
 async def deposit(ctx, amount: int):
@@ -2211,15 +2349,23 @@ async def lyrics(ctx, *, song: str):
 
 @bot.command()
 async def calc(ctx, *, expr: str):
+    allowed = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv}
+    
+    def eval_expr(node):
+        if isinstance(node, ast.BinOp) and type(node.op) in allowed:
+            return allowed[type(node.op)](eval_expr(node.left), eval_expr(node.right))
+        elif isinstance(node, ast.Num):
+            return node.n
+        raise ValueError("Unsupported expression")
+
     try:
-        node = ast.parse(expr, mode='eval')
-        for n in ast.walk(node):
-            if not isinstance(n, (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, ast.Load, ast.operator, ast.unaryop)):
-                raise ValueError("Unsafe expression.")
-        result = eval(compile(node, "<string>", "eval"))
+        tree = ast.parse(expr, mode='eval')
+        result = eval_expr(tree.body)
         await ctx.send(f"Result: {result}")
-    except Exception:
-        await ctx.send("Invalid or unsafe expression.")
+    except:
+        await ctx.send("Invalid or unsupported expression.")
+
+import random
 
 @bot.command()
 async def kill(ctx, user: discord.Member):
@@ -2232,7 +2378,7 @@ async def kill(ctx, user: discord.Member):
 
 @bot.command()
 async def divorce(ctx):
-    marriages = main_db.table("marriages")
+    marriages = db.table("marriages")
     QueryObj = Query()
 
     entry = marriages.get((QueryObj.user_id == str(ctx.author.id)) | (QueryObj.spouse_id == str(ctx.author.id)))
@@ -2244,7 +2390,7 @@ async def divorce(ctx):
 
 @bot.command()
 async def marriages(ctx):
-    marriages = main_db.table("marriages")
+    marriages = db.table("marriages")
     if len(marriages) == 0:
         return await ctx.send("No one is married yet.")
 
@@ -2293,13 +2439,12 @@ async def acceptproposal(ctx):
     proposer_vow_entry = vows_table.get(Query().user_id == str(proposer_id))
 
     marriages_table.insert({
-    "user_id": str(proposer_id),
-    "spouse_id": str(ctx.author.id),
-    "timestamp": datetime.utcnow().isoformat(),
-    "proposer_vow": proposer_vow_entry["vow"] if proposer_vow_entry else "No vow provided.",
-    "accepter_vow": accepter_vow_entry["vow"] if accepter_vow_entry else "No vow provided."
-})
-
+        "user_id": str(proposer_id),
+        "spouse_id": str(ctx.author.id),
+        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "proposer_vow": proposer_vow_entry["vow"] if proposer_vow_entry else "No vow provided.",
+        "accepter_vow": accepter_vow_entry["vow"] if accepter_vow_entry else "No vow provided."
+    })
 
     del pending_proposals[ctx.author.id]
     await ctx.send(f"{ctx.author.mention} and {proposer.mention} are now married! 💍")
@@ -2408,7 +2553,7 @@ def create_and_store_board(user_id):
     board = generate_bingo_board()
     called = []
 
-    main_db.upsert({
+    db.upsert({
         'user_id': user_id,
         'board': board,
         'called': called
@@ -2417,13 +2562,13 @@ def create_and_store_board(user_id):
     return board
 
 def get_bingo_data(user_id):
-    data = main_db.get(Bingo.user_id == user_id)
+    data = db.get(Bingo.user_id == user_id)
     if data:
         return data['board'], data['called']
     return None, None
 
 def update_called_numbers(user_id, called):
-    main_db.update({'called': called}, Bingo.user_id == user_id)
+    db.update({'called': called}, Bingo.user_id == user_id)
 
 @bot.command()
 async def bingo(ctx):
@@ -2477,6 +2622,7 @@ def format_board(board, called):
     ])
 
 def generate_bingo_board(size=5):
+    import random
     nums = random.sample(range(1, size*size+1), size*size)
     return [nums[i*size:(i+1)*size] for i in range(size)]
 

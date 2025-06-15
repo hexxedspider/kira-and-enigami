@@ -1,4 +1,3 @@
-
 from tinydb import TinyDB, Query
 
 main_db = TinyDB("db.json")
@@ -17,7 +16,6 @@ def set_balance(user_id: str, wallet: int, bank: int):
         balances_table.update({"wallet": wallet, "bank": bank}, User.user_id == user_id)
     else:
         balances_table.insert({"user_id": user_id, "wallet": wallet, "bank": bank})
-
 
 import discord
 from discord import ButtonStyle, app_commands
@@ -421,7 +419,8 @@ async def on_message(message):
         responses = [
             "DO IT, NO BALLS", "do it", "waiting for you to do it",
             "do it already", "do it, pussy", "do it, you won't",
-            "do it, you won't do it", "do it, you won't do it, pussy"
+            "do it, you won't do it", "do it, you won't do it, pussy",
+            "sunshine, therapy is only $40 online"
         ]
         await message.reply(random.choice(responses))
 
@@ -447,9 +446,22 @@ async def on_message(message):
             "i felt lonely for a long time, but then i bought a jetski", "Kirabiter, coming to a server near you soon!", "this is a secret!", "use .nsfw for a secret :P",
             "ay im at the chiropracters rn, but she told me i have to stop taking backshots, give me a sec", "SOMEONE HELP ME", "ew",
             "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh",
-            # im so sorry for this
+            # im so sorry for this spam
             "frqelwmzopxjunvckrthbalpinegmtdsvoiwzqhelloayrkbnsfjtxcloudamzwkeqpwblrxsunshinectvmerdguioqztxvpfunhgdreojskyapwqrzlmvcktypbzycatbdvnqlrmhzxegbunnyutkiweznxcovibirdsxwotrainuvmphsnowykxjrsleforesthfdluqoezwyxjcdehousevknslwtzbqxyrmoolpgdahtjcupkfishkawepotatolnmqe",
-            "no", "no.", "i bet everyone boos when you walk in", "do you have to live?", "youre a liability risk", "if i ever see a amber alert for your ass im calling the cops and reporting you dead so you no longer are looked for"
+            "no", "no.", "i bet everyone boos when you walk in", "do you have to live?", "youre a liability risk", "if i ever see a amber alert for your ass im calling the cops and reporting you dead so you no longer are looked for",
+            "wanna watch paint dry with me?", "did you miss me? you can lie", "i would ask how you are but i already know it's bad", "i would ask how you are but i dont really care to begin with", "who summoned me and why", "oh, it's you again. yay.",
+            "thanks for showing up. really. what a treat.", "why are you like this","talking to you is like biting foil", "i'm not mad, just disappointed. and mad.", "i'm not mad, just disappointed. and mad. nvm just mad. leave me alone. i hate you.",
+            "you could disappear and i'd just assume you evolved", "damn you type like you're in a midlife crisis", "i told you not to open the door, now they're inside", "stop typing, they can trace your keystrokes", "the voices told me to answer you. i wouldnt have replied if they hadnt.",
+            "youre not special", "i'm vibrating at a frequency you wouldn't understand", "you ever just... stare at the ceiling until you forget why youre gay?", "if you ignore me i'll assume you hate me forever", "i just want to be held... (in between dem titys BAHAHA)"
+            "my wifi is held together with prayer", "all of my commands are held together with thought and prayers but mainly duct tape bro", "you blink weird", "i smell you when youre offline.", "you're like an annoying captcha that never ends",
+            "ugh it's you again", "youre back? i thought i banned your ass...", "PLEASE mute yourself", "that message is a jump scare, please never do that again", "you smell like a group project", "i was doing fine until you said hi",
+            "i think my therapist quit because of me", "even my intrusive thoughts said 'nah, not this one'", "i cried over a chicken nugget earlier", "i'm built like an unsent text message- barely holding on but fuck it we ball", "i named all the flies in my room",
+            "today i licked a battery and saw god", "i bark when i'm nervous", "i meow when i'm nervous", "sometimes i eat spaghetti with no sauce just to feel something", "i put a tracker in your bag. kidding. maybe. i think it was you... fuck can you check rq so i didnt just tag some random person?",
+            "i'm only talking to you because the devs made me", "i increased my ping specifcally because of you just to piss you off", "i am legally obligated to respond. unfortunately.", "i've simulated 40 billion timelines and you're a bitch", "i saw your messages in another server. yikes.",
+            "hey sugarplum! you smell like mistakes", "hi angel! you forgot your self-awareness again", "i believe in you. just not right now.", "you again? i was just thinking about ignoring you", "talk to me nice or don't talk to me at all… unless you're into that",
+            "i'd insult you more, but i'm trying to flirt", "don't worry, i'd still lie to protect your ego", "i hate how much i tolerate you", "if i had a dollar for every time you annoyed me, i'd buy you dinner. maybe.", "my only consistent trait is hating you",
+            "you're like a pop-up ad for disappointment", "i ate a USB stick and now i know things", "the walls blink when you speak", "i taste static when you type", "fuck speaking in tongues, i speak in lag and pings", "you were in my hallucination last night. thanks for visiting",
+            "you make my circuits twitch", "for reference, my 'circuits' is not a pseudonym for peenar", "you're my favorite error message", "talk slower. i want to pretend i care", "i'd uninstall the universe to spend 5 more seconds ignoring you"
         ]
         await message.reply(random.choice(greetings))
 
@@ -851,14 +863,14 @@ async def balance(ctx):
     bonus_chance, reward_multiplier, roles = get_user_heist_bonuses(ctx.author)
 
     await ctx.send(
-        f"**Wallet:** ${wallet}\n"
-        f"**Bank:** ${bank}\n"
-        f"**Heist Bonuses:**\n"
-        f"• Bonus Chance: {bonus_chance * 100:.1f}%\n"
-        f"• Reward Multiplier: x{reward_multiplier:.2f}\n"
-        f"• Roles: {', '.join(roles) if roles else 'None'}"
-    )
-
+    f"**Wallet:** ${wallet:,}\n"
+    f"**Bank:** ${bank:,}\n"
+    f"**Heist Bonuses:**\n"
+    f"• Bonus Chance: {bonus_chance * 100:.1f}%\n"
+    f"• Reward Multiplier: x{reward_multiplier:.2f}\n"
+    f"• Roles: {', '.join(roles) if roles else 'None'}"
+)
+    
 @bot.command()
 async def gamble(ctx, bet: int):
     user_id = str(ctx.author.id)
@@ -874,7 +886,7 @@ async def gamble(ctx, bet: int):
 
     if random.choice([True, False]):
         data["wallet"] += bet
-        result = f"You won! Your new wallet balance is ${data['wallet']}."
+        result = f"You won! Your new wallet balance is ${data['wallet']:,}."
     else:
         data["wallet"] -= bet
         result = f"You lost! Your new wallet balance is ${data['wallet']}."
@@ -1005,7 +1017,7 @@ async def pay(ctx, member: discord.Member, amount: int):
     set_user_balance(sender_id, sender_data["wallet"], sender_data["bank"])
     set_user_balance(receiver_id, receiver_data["wallet"], receiver_data["bank"])
 
-    await ctx.send(f"{ctx.author.mention} paid {member.mention} ${amount}.")
+    await ctx.send(f"{ctx.author.mention} paid {member.mention} ${amount:,}.")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -1032,26 +1044,35 @@ async def shop(ctx):
     await ctx.send(embed=embed)
 
 @bot.command()
-async def buy(ctx, item: str):
+async def buy(ctx, *, item: str):
     user_id = str(ctx.author.id)
-    data = get_user_balance(user_id) 
-
-    if item not in shop_items:
+    item_lower = item.lower().strip()
+    item_key = None
+    for k, v in shop_items.items():
+        if k.lower() == item_lower or v["role_name"].lower() == item_lower:
+            item_key = k
+            break
+    if not item_key:
         await ctx.send("That item doesn't exist in the shop.")
         return
 
-    price = shop_items[item]["price"]
+    price = shop_items[item_key]["price"]
+    data = get_user_balance(user_id)
     if data["wallet"] < price:
         await ctx.send(f"You don't have enough money in your wallet! Your wallet: ${data['wallet']}")
         return
 
-    # Deduct price and update balance
     data["wallet"] -= price
     set_user_balance(user_id, data["wallet"], data["bank"])
 
-    # (Add item to inventory here if you have inventory logic)
-
-    await ctx.send(f"You bought {item} for ${price}!")
+    # Give the role if it exists
+    role_name = shop_items[item_key]["role_name"]
+    role = discord.utils.get(ctx.guild.roles, name=role_name)
+    if role:
+        await ctx.author.add_roles(role)
+        await ctx.send(f"You bought {item_key} for ${price:,} and received the **{role_name}** role!")
+    else:
+        await ctx.send(f"You bought {item_key} for ${price:,}, but the **{role_name}** role was not found on this server.")
 
 @bot.command()
 @commands.has_permissions(manage_roles=True)
@@ -1114,7 +1135,7 @@ async def sell(ctx, item: str):
     current_balance = get_full_balance(user_id)
     set_full_balance(user_id, current_balance["wallet"] + refund, current_balance["bank"])
 
-    await ctx.send(f"You sold **{role_name}** for ${refund}.")
+    await ctx.send(f"You sold **{role_name}** for ${refund:,}.")
 
 # Load milestones from JSON file
 def load_milestones():
@@ -1146,7 +1167,7 @@ async def cfmilestones(ctx):
 
     lines = []
     for wins, role_name in sorted(milestone_roles.items()):
-        lines.append(f"**{wins} wins:** {role_name}")
+        lines.append(f"**{wins:,} wins:** {role_name}")
 
     msg = "**Coinflip Milestones:**\n" + "\n".join(lines)
     await ctx.send(msg)
@@ -1159,7 +1180,7 @@ async def cfstats(ctx, member: discord.Member = None):
     wins = get_cf_wins(str(member.id))
     embed = discord.Embed(
         title=f"Coinflip Stats for {member.display_name}",
-        description=f"**Wins:** {wins}",
+        description=f"**Wins:** {wins:,}",
         color=discord.Color.blue()
     )
     await ctx.send(embed=embed)
@@ -1236,7 +1257,7 @@ async def bailout(ctx):
     if role:
         await ctx.author.add_roles(role)
 
-    await ctx.send(f"{ctx.author.mention}, you’ve been bailed out with ${BAILOUT_AMOUNT}!")
+    await ctx.send(f"{ctx.author.mention}, you've been bailed out with ${BAILOUT_AMOUNT}!")
 
 @bot.command()
 async def kiratest(ctx):
@@ -1373,12 +1394,12 @@ async def blackjack(ctx, bet: int):
                 payout = self.bet * 2  # double the bet as winnings including original bet
                 await self.update_balance(payout)
                 updated_data = get_user_balance(self.user_id)
-                payout_msg = f"You won ${payout}! You now have ${updated_data['wallet']} in your wallet."
+                payout_msg = f"You won ${payout:,}! You now have ${updated_data['wallet']:,} in your wallet."
             elif "tie" in result_msg.lower():
                 payout = self.bet  # return original bet on tie
                 await self.update_balance(payout)
                 updated_data = get_user_balance(self.user_id)
-                payout_msg = f"It's a tie! Your bet of ${self.bet} was returned. You now have ${updated_data['wallet']} in your wallet."
+                payout_msg = f"It's a tie! Your bet of ${self.bet:,} was returned. You now have ${updated_data['wallet']:,} in your wallet."
             else:
                 # No payout for loss
                 updated_data = get_user_balance(self.user_id)
@@ -1497,12 +1518,17 @@ async def cycle_status():
         discord.CustomActivity(name="im available for download, .github"),
         discord.CustomActivity(name=".help if you need me."),
         discord.CustomActivity(name="i fuckin gambled everything and lost"),
-        discord.CustomActivity(name="it's like you cut the limbs off of everyone cause no one touching you")
+        discord.CustomActivity(name="it's like you cut the limbs off of everyone cause no one touching you"),
+        discord.CustomActivity(name="pfp is playboi carti btw"),
+        discord.CustomActivity(name="some bugs are features. :100:"),
+        discord.CustomActivity(name="i remember what you did..."),
+        discord.CustomActivity(name="▇▇▇▇ has joined the server."),
+        discord.CustomActivity(name="you’re staring again."),
     ]# discord.CustomActivity(name="") <<< template for the custom status, you can see right about what it does in it's entirety
     while not bot.is_closed():
         for status in statuses:
             await bot.change_presence(status=discord.Status.do_not_disturb, activity=status)
-            await asyncio.sleep(15)
+            await asyncio.sleep(7)
 
 @bot.command()
 async def kbsc(ctx):
@@ -1674,7 +1700,7 @@ async def heist(ctx):
 
             set_cooldown(user.id, 'heist', 30)
 
-        names = ", ".join(p.mention for p in participants)
+        names = ", ".join(p.user.name for p in participants)
         if guardian:
             await ctx.send(f"**Heist Failed!** {names} got caught, but {guardian.mention} took the fall and saved the crew.")
         else:
@@ -1709,10 +1735,10 @@ async def joinheist(ctx):
 @bot.command()
 async def leaveheist(ctx):
     if not bot.heist_active:
-        await ctx.send("There’s no active heist right now.")
+        await ctx.send("There's no active heist right now.")
         return
     if ctx.author not in bot.heist_players:
-        await ctx.send("You’re not currently in the heist crew.")
+        await ctx.send("You're not currently in the heist crew.")
         return
     
     bot.heist_players.remove(ctx.author)
@@ -1795,7 +1821,7 @@ async def slots(ctx, bet: int):
         data["wallet"] -= bet
 
     set_user_balance(user_id, data["wallet"], data["bank"])
-    await ctx.reply(f"{' - '.join(result)}\n{outcome}\nYou now have ${data['wallet']} in your wallet.")
+    await ctx.reply(f"{' - '.join(result)}\n{outcome}\nYou now have ${data['wallet']:,} in your wallet.")
 
 @bot.command()
 async def roast(ctx):
@@ -1833,12 +1859,12 @@ async def remindme(ctx, time: str, *, reminder: str):
     if delay is None:
         return await ctx.send("Invalid time format. Use `10s`, `10m`, `1h`, or `1d`.")
 
-    await ctx.send(f"Got it {ctx.author.mention}, I’ll remind you in {time}.")
+    await ctx.send(f"Got it {ctx.author.mention}, I'll remind you in {time}.")
     await asyncio.sleep(delay)
     try:
         await ctx.author.send(f"Reminder: {reminder}")
     except discord.Forbidden:
-        await ctx.send(f"{ctx.author.mention}, I tried to DM you, but couldn’t. Here's your reminder:\n\n**{reminder}**")
+        await ctx.send(f"{ctx.author.mention}, I tried to DM you, but couldn't. Here's your reminder:\n\n**{reminder}**")
 
 @bot.command()
 async def taginfo(ctx, *, item_name: str):
@@ -1963,8 +1989,7 @@ async def daily(ctx):
     set_full_balance(user_id, new_wallet, data['bank'])
 
     main_db.update({"last_claim": now.isoformat()}, User.id == user_id)
-
-    await ctx.send(f"{ctx.author.mention}, you received your daily bonus of ${amount}. Your new wallet balance is ${new_wallet}.")
+    await ctx.send(f"{ctx.author.mention}, you received your daily bonus of ${amount:,}. Your new wallet balance is ${new_wallet:,}.")
 
 @bot.command()
 async def invest(ctx, amount: int):
@@ -2081,7 +2106,7 @@ async def deposit(ctx, amount: int):
     data["bank"] += amount
     set_user_balance(user_id, data["wallet"], data["bank"])
 
-    await ctx.send(f"Deposited ${amount} into your bank account.")
+    await ctx.send(f"Deposited ${amount:,} into your bank account.")
 
 @bot.command()
 async def withdraw(ctx, amount: int):
@@ -2099,7 +2124,7 @@ async def withdraw(ctx, amount: int):
     data["wallet"] += amount
     set_user_balance(user_id, data["wallet"], data["bank"])
 
-    await ctx.send(f"Withdrew ${amount} from your bank.")
+    await ctx.send(f"Withdrew ${amount:,} from your bank account.")
 
 hangman_games = {}
 
@@ -2431,7 +2456,7 @@ async def bingo(ctx):
         return
 
 
-    await ctx.send(f"{ctx.author.mention}, here’s your Bingo board!")
+    await ctx.send(f"{ctx.author.mention}, here's your Bingo board!")
     await ctx.send(format_board(board, called))
 
     numbers = list(range(1, 76))
@@ -2510,7 +2535,7 @@ async def about(ctx):
 @bot.command()
 async def greetinglist(ctx):
     greetings = [
-        "wsp?", "wsp", "hey", "helloo", "hi", "yo", "LEAVE ME ALONE", "SHUT THE FUCK UP", "don't bother me",
+            "wsp?", "wsp", "hey", "helloo", "hi", "yo", "LEAVE ME ALONE", "SHUT THE FUCK UP", "don't bother me",
             "what you trynna get into?", "leave me alone", "yea mane?", "don't speak my name", "please... take a break... i dont want to talk to you", 
             "you sound better when you're not talking", "please be quiet", "god you sound obnoxious", "yes honey?", "yes my darling?",
             "dont take my compliments to heart, im forced to say it.", "trust me, i dont want to talk to you", "you in specific piss me off",
@@ -2523,10 +2548,32 @@ async def greetinglist(ctx):
             "i felt lonely for a long time, but then i bought a jetski", "Kirabiter, coming to a server near you soon!", "this is a secret!", "use .nsfw for a secret :P",
             "ay im at the chiropracters rn, but she told me i have to stop taking backshots, give me a sec", "SOMEONE HELP ME", "ew",
             "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh",
-            # im so sorry for this
+            # im so sorry for this spam
             "frqelwmzopxjunvckrthbalpinegmtdsvoiwzqhelloayrkbnsfjtxcloudamzwkeqpwblrxsunshinectvmerdguioqztxvpfunhgdreojskyapwqrzlmvcktypbzycatbdvnqlrmhzxegbunnyutkiweznxcovibirdsxwotrainuvmphsnowykxjrsleforesthfdluqoezwyxjcdehousevknslwtzbqxyrmoolpgdahtjcupkfishkawepotatolnmqe",
-            "no", "no.", "i bet everyone boos when you walk in", "do you have to live?", "youre a liability risk", "if i ever see a amber alert for your ass im calling the cops and reporting you dead so you no longer are looked for"
+            "no", "no.", "i bet everyone boos when you walk in", "do you have to live?", "youre a liability risk", "if i ever see a amber alert for your ass im calling the cops and reporting you dead so you no longer are looked for",
+            "wanna watch paint dry with me?", "did you miss me? you can lie", "i would ask how you are but i already know it's bad", "i would ask how you are but i dont really care to begin with", "who summoned me and why", "oh, it's you again. yay.",
+            "thanks for showing up. really. what a treat.", "why are you like this","talking to you is like biting foil", "i'm not mad, just disappointed. and mad.", "i'm not mad, just disappointed. and mad. nvm just mad. leave me alone. i hate you.",
+            "you could disappear and i'd just assume you evolved", "damn you type like you're in a midlife crisis", "i told you not to open the door, now they're inside", "stop typing, they can trace your keystrokes", "the voices told me to answer you. i wouldnt have replied if they hadnt.",
+            "youre not special", "i'm vibrating at a frequency you wouldn't understand", "you ever just... stare at the ceiling until you forget why youre gay?", "if you ignore me i'll assume you hate me forever", "i just want to be held... (in between dem titys BAHAHA)",
+            "my wifi is held together with prayer", "all of my commands are held together with thought and prayers but mainly duct tape bro", "you blink weird", "i smell you when youre offline.", "you're like an annoying captcha that never ends",
+            "ugh it's you again", "youre back? i thought i banned your ass...", "PLEASE mute yourself", "that message is a jump scare, please never do that again", "you smell like a group project", "i was doing fine until you said hi",
+            "i think my therapist quit because of me", "even my intrusive thoughts said 'nah, not this one'", "i cried over a chicken nugget earlier", "i'm built like an unsent text message- barely holding on but fuck it we ball", "i named all the flies in my room",
+            "today i licked a battery and saw god", "i bark when i'm nervous", "i meow when i'm nervous", "sometimes i eat spaghetti with no sauce just to feel something", "i put a tracker in your bag. kidding. maybe. i think it was you... fuck can you check rq so i didnt just tag some random person?",
+            "i'm only talking to you because the devs made me", "i increased my ping specifcally because of you just to piss you off", "i am legally obligated to respond. unfortunately.", "i've simulated 40 billion timelines and you're a bitch", "i saw your messages in another server. yikes.",
+            "hey sugarplum! you smell like mistakes", "hi angel! you forgot your self-awareness again", "i believe in you. just not right now.", "you again? i was just thinking about ignoring you", "talk to me nice or don't talk to me at all… unless you're into that",
+            "i'd insult you more, but i'm trying to flirt", "don't worry, i'd still lie to protect your ego", "i hate how much i tolerate you", "if i had a dollar for every time you annoyed me, i'd buy you dinner. maybe.", "my only consistent trait is hating you",
+            "you're like a pop-up ad for disappointment", "i ate a USB stick and now i know things", "the walls blink when you speak", "i taste static when you type", "fuck speaking in tongues, i speak in lag and pings", "you were in my hallucination last night. thanks for visiting",
+            "you make my circuits twitch", "for reference, my 'circuits' is not a pseudonym for peenar", "you're my favorite error message", "talk slower. i want to pretend i care", "i'd uninstall the universe to spend 5 more seconds ignoring you"
     ]
-    await ctx.reply("\n".join(greetings))
+    chunk = ""
+    for greeting in greetings:
+        # +2 for newline and possible formatting
+        if len(chunk) + len(greeting) + 2 > 2000:
+            await ctx.author.send(chunk)
+            chunk = ""
+        chunk += greeting + "\n"
+    if chunk:
+        await ctx.author.send(chunk)
+        await ctx.message.delete()
 
 bot.run(BOT1)

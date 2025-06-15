@@ -50,7 +50,6 @@ def log_command(ctx):
 async def on_command(ctx):
     log_command(ctx)
 
-# ---------- HELP command ----------
 @bot.command()
 async def help(ctx):
     # Delete invoking message if in a guild
@@ -91,7 +90,6 @@ async def help(ctx):
     else:
         await ctx.send(embed=embed)
 
-# ---------- Rule34 command ----------
 @bot.command()
 async def r34(ctx, *, tags: str):
     if ctx.guild and not ctx.channel.is_nsfw():
@@ -433,9 +431,14 @@ async def danbooru(ctx, *, tags: str = None):
         await ctx.send(embed=embed)
 
 @bot.command()
+async def github(ctx):
+    """Sends the GitHub repo link for the bot.""" 
+    await ctx.send("[GitHub](https://github.com/hexxedspider/kira-and-enigami)")
+
+@bot.command()
 async def invslavelink(ctx):
     try:
-        await ctx.author.send("[Link here.](https://discord.com/oauth2/authorize?client_id=1380780651120296076&permissions=8&integration_type=0&scope=bot)")
+        await ctx.author.send("[Link here.](https://discord.com/oauth2/authorize?client_id=1130756120701579354&permissions=8&integration_type=0&scope=bot)")
     except discord.Forbidden:
         error = await ctx.send("I couldn't DM you. Please check your privacy settings.")
         await error.delete(delay=5)
@@ -449,6 +452,24 @@ REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT")
 
 reddit = None  # global placeholder
 
+async def cycle_status():
+    await bot.wait_until_ready()
+    statuses = [
+        discord.Activity(type=discord.ActivityType.listening, name="what im told to do"),
+        discord.CustomActivity(name="fuck it, mmh~"),
+        discord.CustomActivity(name="im slightly unhinged but you already know that if you have me added"),
+        discord.CustomActivity(name="AHH STOP- !"),
+        discord.CustomActivity(name="im available for download as well, .github"),
+        discord.CustomActivity(name="no i dont have weird time with kira, quit asking"),
+        discord.CustomActivity(name="!help because ! is way better than .]"),
+        discord.CustomActivity(name="i have a brother and sister"),
+        discord.CustomActivity(name="use !invslavelink for my sister"),
+    ]
+    while not bot.is_closed():
+        for status in statuses:
+            await bot.change_presence(status=discord.Status.idle, activity=status)
+            await asyncio.sleep(15)
+
 @bot.event
 async def on_ready():
     global reddit
@@ -458,6 +479,7 @@ async def on_ready():
             client_secret=REDDIT_CLIENT_SECRET,
             user_agent=REDDIT_USER_AGENT,
         )
+    bot.loop.create_task(cycle_status())
     print(f"Logged in as {bot.user}, Reddit client initialized")
 
 @bot.command()

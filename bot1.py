@@ -159,7 +159,7 @@ async def assign_bankrupt_role(ctx, user_id):
 @bot.command()
 async def invenilink(ctx):
     try:
-        await ctx.author.send("[Link here.](https://discord.com/oauth2/authorize?client_id=1380716495767605429&permissions=8&integion_type=0&scope=bot)")
+        await ctx.author.send("[Link here.](https://discord.com/oauth2/authorize?client_id=949153090433605682&permissions=8&integration_type=0&scope=bot)")
     except discord.Forbidden:
         error = await ctx.send("I couldn't DM you. Please check your privacy settings.")
         await error.delete(delay=5)
@@ -310,7 +310,7 @@ async def help(ctx):
 
     embed10 = discord.Embed(
     title="Help Page 10",
-    description="Game & Meme Commands",
+    description="Fun & Info Commands",
     color=discord.Color.blurple()
 )
     embed10.set_footer(text=f"This menu disables in 60 seconds.")
@@ -323,26 +323,26 @@ async def help(ctx):
     embed10.add_field(name=".mock", value="Reformats your text into a mocking tone.", inline=True)
 
     embed11 = discord.Embed(
-        title="Help - Commands 1 to 6",
-        description="Here are some of the bot commands:",
-        color=discord.Color.blue()
+        title="Help page 11",
+        description="Fun & Info Commands",
+        color=discord.Color.blurple()
 )
     embed11.add_field(name=".time", value="Show current time in your timezone.", inline=False)
     embed11.add_field(name=".timezone", value="Set or view your timezone.", inline=False)
-    embed11.add_field(name=".lyrics", value="Get lyrics of a song.", inline=False)
     embed11.add_field(name=".calc", value="Calculate a math expression.", inline=False)
     embed11.add_field(name=".kill", value="Rather line along killing someone.", inline=False)
     embed11.add_field(name=".connect4", value="Play Connect4 against someone.", inline=False)
+    embed11.add_field(name=".listemojis", value="Lists all emojis the bot has (interally, that is).", inline=False)
     
     embed12 = discord.Embed(
-        title="Help - Commands 7 to 12",
-        description="More bot commands:",
-        color=discord.Color.blue()
-    )
-    embed12.add_field(name=".marry", value="Marry another user.", inline=False)
+        title="Help Page 12",
+        description="Fun & Info Commands",
+        color=discord.Color.blurple()
+)
     embed12.add_field(name=".divorce", value="Divorce your spouse.", inline=False)
     embed12.add_field(name=".marriages", value="View all marriages.", inline=False)
     embed12.add_field(name=".propose", value="Propose marriage to someone.", inline=False)
+    embed12.add_field(name=".about", value="Sends an embed with various facts about the bot and the creator.")
     
     view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6, embed7, embed8, embed9, embed10, embed11, embed12])
     await ctx.send(embed=embed1, view=view)
@@ -435,17 +435,21 @@ async def on_message(message):
     if any(name in msg_content for name in bot_names):
         greetings = [
             "wsp?", "wsp", "hey", "helloo", "hi", "yo", "LEAVE ME ALONE", "SHUT THE FUCK UP", "don't bother me",
-            "what you trynna get into?", "leave me alone", "yea mane?", "don't speak my name",
+            "what you trynna get into?", "leave me alone", "yea mane?", "don't speak my name", "please... take a break... i dont want to talk to you", 
             "you sound better when you're not talking", "please be quiet", "god you sound obnoxious", "yes honey?", "yes my darling?",
             "dont take my compliments to heart, im forced to say it.", "trust me, i dont want to talk to you", "you in specific piss me off",
             "just came back from coolville, they ain't know you", "want to go down the slide with me?", "want to go on the swings? the playground's empty.",
             "just came back from coolville, they said you're the mayor", "lowkey dont know what im doing give me a sec", ".help is NOT my name, try again",
-            "hold on im shoving jelly beans up my ass", "cant talk, im at the doctors, but tell me why they said i need to stop letting people finish in me ??"
+            "hold on im shoving jelly beans up my ass", "cant talk, im at the doctors, but tell me why they said i need to stop letting people finish in me ??",
             "cant talk rn, to make a long story short, im being chased for putting barbeque sauce on random people",
             "im at the dentist rn but they said i need to stop doing oral ??", "the aliens are coming, hide", "im coming, hide", "how the fuck does this thing work?"
             "i cnat fiind my glases, 1 sec", "i difnt fnid my glasess", "holy fuck shut up", "do you ever be quiet?", "will you die if you stop talking?", "yeah?", "what?",
             "i felt lonely for a long time, but then i bought a jetski", "Kirabiter, coming to a server near you soon!", "this is a secret!", "use .nsfw for a secret :P",
-            "ay im at the chiropracters rn, but she told me i have to stop taking backshots, give me a sec", "SOMEONE HELP ME", "ew"
+            "ay im at the chiropracters rn, but she told me i have to stop taking backshots, give me a sec", "SOMEONE HELP ME", "ew",
+            "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh",
+            # im so sorry for this
+            "frqelwmzopxjunvckrthbalpinegmtdsvoiwzqhelloayrkbnsfjtxcloudamzwkeqpwblrxsunshinectvmerdguioqztxvpfunhgdreojskyapwqrzlmvcktypbzycatbdvnqlrmhzxegbunnyutkiweznxcovibirdsxwotrainuvmphsnowykxjrsleforesthfdluqoezwyxjcdehousevknslwtzbqxyrmoolpgdahtjcupkfishkawepotatolnmqe",
+            "no", "no.", "i bet everyone boos when you walk in", "do you have to live?", "youre a liability risk", "if i ever see a amber alert for your ass im calling the cops and reporting you dead so you no longer are looked for"
         ]
         await message.reply(random.choice(greetings))
 
@@ -840,7 +844,7 @@ async def balance(ctx):
         await ctx.send(
             f"**Wallet:** ${wallet}\n"
             f"**Bank:** ${bank}\n\n"
-            f"You don't have any role bonuses in DMs, since roles only exist in servers."
+            f"Use this in a server to see your bonuses."
         )
         return
 
@@ -876,11 +880,11 @@ async def gamble(ctx, bet: int):
         result = f"You lost! Your new wallet balance is ${data['wallet']}."
 
     set_user_balance(user_id, data["wallet"], data["bank"])
-    await ctx.send(result)
+    await ctx.reply(result)
 
 @bot.command()
 async def github(ctx):
-    """Sends the GitHub repo link for the bot."""
+    """Sends the GitHub repo link for the bot.""" 
     await ctx.send("[GitHub](https://github.com/hexxedspider/kira-and-enigami)")
 
 @bot.command()
@@ -1456,27 +1460,6 @@ async def complete_investment(ctx, user_id, amount=None):
     except Exception as e:
         print(f"[Investment] Could not notify user {user_id}: {e}")
 
-
-@tasks.loop(seconds=10) # its 10 seconds to avoid being rate limited too much, may need to change later
-async def update_status():
-    url = f'http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user={FM_USERNAME}&api_key={FM_API}&format=json&limit=1'
-    
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            data = await resp.json()
-            
-            try:
-                track = data['recenttracks']['track'][0]
-                if '@attr' in track and track['@attr'].get('nowplaying') == 'true':
-                    title = track['name']
-                    artist = track['artist']['#text']
-                    status = f"{title} by {artist}"
-                    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=status))
-                else:
-                    await bot.change_presence(activity=None)  # Or idle/default message
-            except Exception as e:
-                print(f"Error updating status: {e}")
-
 @bot.event
 async def on_ready():
     global reddit
@@ -1502,7 +1485,24 @@ async def on_ready():
         else:
             await complete_investment(None, user_id)
     
-    update_status.start()
+    bot.loop.create_task(cycle_status())
+
+async def cycle_status():
+    await bot.wait_until_ready()
+    statuses = [
+        discord.Activity(type=discord.ActivityType.listening, name="music probably"),
+        discord.CustomActivity(name="DONT SAY KIRABITER IM GETTING TIRED OF IT"),
+        discord.CustomActivity(name="did you know i have ties to two other bots?"),
+        discord.CustomActivity(name="warning you, my sister bot is a little unhinged..."),
+        discord.CustomActivity(name="im available for download, .github"),
+        discord.CustomActivity(name=".help if you need me."),
+        discord.CustomActivity(name="i fuckin gambled everything and lost"),
+        discord.CustomActivity(name="it's like you cut the limbs off of everyone cause no one touching you")
+    ]# discord.CustomActivity(name="") <<< template for the custom status, you can see right about what it does in it's entirety
+    while not bot.is_closed():
+        for status in statuses:
+            await bot.change_presence(status=discord.Status.do_not_disturb, activity=status)
+            await asyncio.sleep(15)
 
 @bot.command()
 async def kbsc(ctx):
@@ -1758,6 +1758,12 @@ async def heistcrew(ctx):
     for embed in embeds:
         await ctx.send(embed=embed)
 
+
+@bot.command()
+async def list_emojis(ctx):
+    emojis = [f"{emoji} - {emoji.name} - {emoji.id}" for emoji in ctx.guild.emojis]
+    await ctx.send("\n".join(emojis) or "No custom emojis found.")
+
 @bot.command()
 async def slots(ctx, bet: int):
     user_id = str(ctx.author.id)
@@ -1789,7 +1795,7 @@ async def slots(ctx, bet: int):
         data["wallet"] -= bet
 
     set_user_balance(user_id, data["wallet"], data["bank"])
-    await ctx.send(f"{' - '.join(result)}\n{outcome}\nYou now have ${data['wallet']} in your wallet.")
+    await ctx.reply(f"{' - '.join(result)}\n{outcome}\nYou now have ${data['wallet']} in your wallet.")
 
 @bot.command()
 async def roast(ctx):
@@ -2199,17 +2205,6 @@ async def timezone(ctx, location: str):
         await ctx.send("Invalid location. Try using a city like `America/New_York`.")
 
 @bot.command()
-async def lyrics(ctx, *, song: str):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"https://api.lyrics.ovh/v1/Unknown/{song}") as resp:
-            data = await resp.json()
-            lyrics = data.get("lyrics", None)
-            if lyrics:
-                await ctx.send(lyrics[:2000])
-            else:
-                await ctx.send("Lyrics not found.")
-
-@bot.command()
 async def calc(ctx, *, expr: str):
     try:
         node = ast.parse(expr, mode='eval')
@@ -2488,5 +2483,50 @@ async def stopbingo(ctx):
         await ctx.send("Bingo game stopped.")
     else:
         await ctx.send("No bingo game is currently running.")
+
+#using this a my own library, this wont make sense in your bot unless you swap out the names and id
+@bot.command()
+async def listemojis(ctx):
+    await ctx.send("<:github:1383501217870643220><:gitdl:1383501210514100445><:gitcli:1383501202645323868>\n"
+    "<:gitcode:1383501196366712946><:apple:1383501189529731363><:wins:1383501182898671616>\n"
+    "<:vsico:1383501177538347068><:reddit:1383501170059771955><:python:1383501139827359844>\n"
+    "<:ig:1383501131371647057><:discordico:1383501121980465392><:discordico:1383501121980465392>\n"
+    "<:android:1383500932028825641><:v4mp:1383502981927927900>\n")
+
+@bot.command()
+async def about(ctx):
+    await ctx.reply("### Me!\n<:gitcli:1383501202645323868> My source code is public! Use [.github](https://github.com/hexxedspider/kira-and-enigami) to see the repo!\n" \
+    "<:discordc:1383501103186051103> I can be used in servers, and most commands do have DM support!\n" \
+    "<:discordico:1383501121980465392> I obviously use [Discord's libraries (python wrapper)](https://github.com/Rapptz/discord.py) to run, wouldn't be possible without it!\n" \
+    "<:gitdl:1383501210514100445> My source code is also availble to be downloaded, provided by [.github](https://github.com/hexxedspider/kira-and-enigami).\n" \
+    "<:vsico:1383501177538347068> I have been written in entirely [VS Code](https://code.visualstudio.com/download)!\n" \
+    "<:python:1383501139827359844> I have been written in Python, even though there is a better option (javascript).\n" \
+    "<:wins:1383501182898671616> I was made while using Windows 10 (rip soon:broken_heart:).\n" \
+    "### The Creator!\n" \
+    "<:v4mp:1383502981927927900> The creator, commonly known as *V4MP*, spider, or Hira, made me originally to test various commands, but his interest slowly grew again, and now I'm here!\n" \
+    "<:android:1383500932028825641> He mainly Android 16, but does have <:apple:1383501189529731363>iPhone 18.5 as a secondary. He prefers Android for the more techy aspect (i know, boo :thumbs_down:).\n" \
+    "<:github:1383501217870643220> He does have his own personal github, simply using it to host my code, but also for other potential projects.")
+
+@bot.command()
+async def greetinglist(ctx):
+    greetings = [
+        "wsp?", "wsp", "hey", "helloo", "hi", "yo", "LEAVE ME ALONE", "SHUT THE FUCK UP", "don't bother me",
+            "what you trynna get into?", "leave me alone", "yea mane?", "don't speak my name", "please... take a break... i dont want to talk to you", 
+            "you sound better when you're not talking", "please be quiet", "god you sound obnoxious", "yes honey?", "yes my darling?",
+            "dont take my compliments to heart, im forced to say it.", "trust me, i dont want to talk to you", "you in specific piss me off",
+            "just came back from coolville, they ain't know you", "want to go down the slide with me?", "want to go on the swings? the playground's empty.",
+            "just came back from coolville, they said you're the mayor", "lowkey dont know what im doing give me a sec", ".help is NOT my name, try again",
+            "hold on im shoving jelly beans up my ass", "cant talk, im at the doctors, but tell me why they said i need to stop letting people finish in me ??",
+            "cant talk rn, to make a long story short, im being chased for putting barbeque sauce on random people",
+            "im at the dentist rn but they said i need to stop doing oral ??", "the aliens are coming, hide", "im coming, hide", "how the fuck does this thing work?"
+            "i cnat fiind my glases, 1 sec", "i difnt fnid my glasess", "holy fuck shut up", "do you ever be quiet?", "will you die if you stop talking?", "yeah?", "what?",
+            "i felt lonely for a long time, but then i bought a jetski", "Kirabiter, coming to a server near you soon!", "this is a secret!", "use .nsfw for a secret :P",
+            "ay im at the chiropracters rn, but she told me i have to stop taking backshots, give me a sec", "SOMEONE HELP ME", "ew",
+            "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh",
+            # im so sorry for this
+            "frqelwmzopxjunvckrthbalpinegmtdsvoiwzqhelloayrkbnsfjtxcloudamzwkeqpwblrxsunshinectvmerdguioqztxvpfunhgdreojskyapwqrzlmvcktypbzycatbdvnqlrmhzxegbunnyutkiweznxcovibirdsxwotrainuvmphsnowykxjrsleforesthfdluqoezwyxjcdehousevknslwtzbqxyrmoolpgdahtjcupkfishkawepotatolnmqe",
+            "no", "no.", "i bet everyone boos when you walk in", "do you have to live?", "youre a liability risk", "if i ever see a amber alert for your ass im calling the cops and reporting you dead so you no longer are looked for"
+    ]
+    await ctx.reply("\n".join(greetings))
 
 bot.run(BOT1)

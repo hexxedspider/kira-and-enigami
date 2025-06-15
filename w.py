@@ -31,8 +31,7 @@ class RestartHandler(FileSystemEventHandler):
 
 if __name__ == "__main__":
     path = "."  # folder to watch
-    bot_scripts = ["bot1.py", "bot2.py", "bot3.py"]  # your two bot scripts
-
+    bot_scripts = ["bot1.py", "bot2.py", "bot3.py"]
     event_handler = RestartHandler(bot_scripts)
     observer = Observer()
     observer.schedule(event_handler, path=path, recursive=False)
@@ -41,7 +40,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            time.sleep(1)
+            time.sleep(5) # set to 5 seconds to avoid small breaks from restarting, forcing rate limits
     except KeyboardInterrupt:
         observer.stop()
         for proc in event_handler.processes.values():

@@ -8,11 +8,11 @@
             "fields": [
                 {
                     "name": "Boosts",
-                    "value": "+2x Daily Bonus\n+10% Heist Success Rate\nNew Summer Items in .shop!",
+                    "value": "+2x Daily Bonus\n+10% Heist Success Rate\nNew Summer items in .shop!",
                     "inline": false
                 },
                 {
-                    "name": "Ends",
+                    "name": "More events coming soon near you!",
                     "value": "June 30, 2025",
                     "inline": true
                 }

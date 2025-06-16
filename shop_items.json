@@ -1,11 +1,17 @@
 {
-    "VIP": {"price": 1000, "role_name": "VIP", "sellable": true},
-    "Elite": {"price": 2500, "role_name": "Elite", "sellable": true},
-    "God": {"price": 5000, "role_name": "God", "sellable": true},
-    "Immortal": {"price": 10000, "role_name": "Immortal", "sellable": true},
-    "True One": {"price": 25000, "role_name": "True One", "sellable": true},
-    "Gambler": {"price": 50000, "role_name": "Gambler", "sellable": true},
-    "Masked": {"price": 10000, "role_name": "Masked", "sellable": false},
-    "Extended Mag": {"price": 15000, "role_name": "Extended Mag", "sellable": false},
-    "Heist Guardian": {"price": 20000, "role_name": "Heist Guardian", "sellable": true}
+"VIP": {"price": 10000, "role_name": "VIP", "sellable": true},
+"Elite": {"price": 25000, "role_name": "Elite", "sellable": true},
+"God": {"price": 100000, "role_name": "God", "sellable": true},
+"Immortal": {"price": 1000000, "role_name": "Immortal", "sellable": true},
+"True": {"price": 10000000, "role_name": "True One", "sellable": true},
+"Ascended": {"price": 15000000, "role_name": "Ascended", "sellable": true},
+"Gambler": {"price": 250000000, "role_name": "Gambler", "sellable": true},
+"Masked": {"price": 1000000, "role_name": "Masked", "sellable": false},
+"Extended": {"price": 500000, "role_name": "Extended Mag", "sellable": false},
+"Proxy": {"price": 1000000, "role_name": "Proxy Server", "sellable": false},
+"Guardian": {"price": 500000000, "role_name": "Heist Guardian", "sellable": false},
+"High": {"price": 400000000, "role_name": "High Roller", "sellable": true},
+"Anomaly": {"price": 1000000000, "role_name": "Anomaly", "sellable": true},
+"Certified": {"price": 5000000000, "role_name": "Certified Loser", "sellable": false},
+"Ivory": {"price": 10000000000, "role_name": "Ivory Warden", "sellable": false}
 }

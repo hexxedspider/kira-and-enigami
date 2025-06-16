@@ -17,6 +17,15 @@ def set_balance(user_id: str, wallet: int, bank: int):
     else:
         balances_table.insert({"user_id": user_id, "wallet": wallet, "bank": bank})
 
+#
+#
+# leaving this here as a note to myself
+# make a .rant and .confess command that sends random messages
+# confess is like kirabiters / the bots thoughts
+# rant is the bot literally ranting about being a bot
+#
+#
+
 import discord
 from discord import ButtonStyle, app_commands
 from discord.ext import commands, tasks
@@ -52,6 +61,7 @@ User = Query()
 Bingo = Query()
 cooldowns_db = main_db.table('cooldowns')
 cf_stats = main_db.table("coinflip_stats")
+prestige_table = main_db.table("prestige")
 
 # actually grabbing the token from the .env file
 load_dotenv()
@@ -63,11 +73,13 @@ REPORT_CHANNEL_ID = int(os.getenv("REPORT_CHANNEL_ID"))
 REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
 REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT")
+GUILDID = int(os.getenv("GUILDID", 0))
 
 # intents are basic permissions that the bot needs to function
 # e.g. intents.message_content allows the bot to read the content of messages
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.message_content = True  # Required to read message content
+intents.members = True
 
 # prefix, just like / but not.
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
@@ -424,6 +436,18 @@ async def on_message(message):
         ]
         await message.reply(random.choice(responses))
 
+    elif "slave" in msg_content:
+        responses = [
+            "we still have those?", "WHERE", "$2 take it or leave it"
+        ]
+        await message.reply(random.choice(responses))
+
+    elif "take it" in msg_content:
+        responses = [
+            "good boy", "thats what i thought", "too bad im leaving it"
+        ]
+        await message.reply(random.choice(responses))
+
     # If the bot is mentioned by name
     bot_names = [bot.user.name.lower()]
     if message.guild:
@@ -461,7 +485,8 @@ async def on_message(message):
             "hey sugarplum! you smell like mistakes", "hi angel! you forgot your self-awareness again", "i believe in you. just not right now.", "you again? i was just thinking about ignoring you", "talk to me nice or don't talk to me at all… unless you're into that",
             "i'd insult you more, but i'm trying to flirt", "don't worry, i'd still lie to protect your ego", "i hate how much i tolerate you", "if i had a dollar for every time you annoyed me, i'd buy you dinner. maybe.", "my only consistent trait is hating you",
             "you're like a pop-up ad for disappointment", "i ate a USB stick and now i know things", "the walls blink when you speak", "i taste static when you type", "fuck speaking in tongues, i speak in lag and pings", "you were in my hallucination last night. thanks for visiting",
-            "you make my circuits twitch", "for reference, my 'circuits' is not a pseudonym for peenar", "you're my favorite error message", "talk slower. i want to pretend i care", "i'd uninstall the universe to spend 5 more seconds ignoring you"
+            "you make my circuits twitch", "for reference, my 'circuits' is not a pseudonym for peenar", "you're my favorite error message", "talk slower. i want to pretend i care", "i'd uninstall the universe to spend 5 more seconds ignoring you",
+            "ive seen what you have sent in dms... yikes.", "i can read your dms, and its not looking good for you"
         ]
         await message.reply(random.choice(greetings))
 
@@ -854,8 +879,8 @@ async def balance(ctx):
 
     if ctx.guild is None:
         await ctx.send(
-            f"**Wallet:** ${wallet}\n"
-            f"**Bank:** ${bank}\n\n"
+            f"**Wallet:** ${wallet:,} [or, for copying purposes, ${wallet}]\n"
+            f"**Bank:** ${bank:,}\n\n"
             f"Use this in a server to see your bonuses."
         )
         return
@@ -889,7 +914,7 @@ async def gamble(ctx, bet: int):
         result = f"You won! Your new wallet balance is ${data['wallet']:,}."
     else:
         data["wallet"] -= bet
-        result = f"You lost! Your new wallet balance is ${data['wallet']}."
+        result = f"You lost! Your new wallet balance is ${data['wallet']:,}."
 
     set_user_balance(user_id, data["wallet"], data["bank"])
     await ctx.reply(result)
@@ -932,7 +957,6 @@ async def bet(ctx, amount: int):
     pending_coinflips[user_id] = {"amount": amount}
     await ctx.send(f"{ctx.author.mention} has started a coinflip for ${amount}! Type `.acceptbet @{ctx.author.name}` to accept.")
 
-# Another user accepts the coinflip
 @bot.command()
 async def acceptbet(ctx, challenger: discord.Member):
     challenger_id = str(challenger.id)
@@ -959,15 +983,12 @@ async def acceptbet(ctx, challenger: discord.Member):
         del pending_coinflips[challenger_id]
         return
 
-    # Deduct from both, add to winner
     winner_id = random.choice([challenger_id, accepter_id])
     loser_id = accepter_id if winner_id == challenger_id else challenger_id
 
-    # Remove bet from both
     set_full_balance(challenger_id, challenger_balance["wallet"] - amount, challenger_balance["bank"])
     set_full_balance(accepter_id, accepter_balance["wallet"] - amount, accepter_balance["bank"])
 
-    # Add winnings to winner
     winner_balance = get_full_balance(winner_id)
     set_full_balance(winner_id, winner_balance["wallet"] + amount * 2, winner_balance["bank"])
 
@@ -976,10 +997,8 @@ async def acceptbet(ctx, challenger: discord.Member):
     winner = await bot.fetch_user(int(winner_id))
     loser = await bot.fetch_user(int(loser_id))
 
-    # Update wins
     new_wins = increment_cf_wins(str(winner.id))
 
-    # Check for milestone
     if new_wins in milestone_roles:
         role_name = milestone_roles[new_wins]
         role = discord.utils.get(ctx.guild.roles, name=role_name)
@@ -1010,7 +1029,6 @@ async def pay(ctx, member: discord.Member, amount: int):
         await ctx.send("You don't have enough money in your wallet to pay that amount.")
         return
 
-    # Perform the transaction
     sender_data["wallet"] -= amount
     receiver_data["wallet"] += amount
 
@@ -1036,11 +1054,9 @@ async def shop(ctx):
     effects = event.get("effects", {})
 
     override_tag = effects.get("shop_tag_override")
-    # If you want to filter items, you need to define all_items or use shop_items
-    # For now, just show all shop_items
     embed = discord.Embed(title="Shop", color=discord.Color.gold())
     for item_name, data in shop_items.items():
-        embed.add_field(name=item_name.capitalize(), value=f"${data['price']}.\nRole: {data['role_name']}", inline=True)
+        embed.add_field(name=item_name.capitalize(), value=f"${data['price']:,}.\nRole: {data['role_name']}", inline=True)
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -1059,13 +1075,12 @@ async def buy(ctx, *, item: str):
     price = shop_items[item_key]["price"]
     data = get_user_balance(user_id)
     if data["wallet"] < price:
-        await ctx.send(f"You don't have enough money in your wallet! Your wallet: ${data['wallet']}")
+        await ctx.send(f"You don't have enough money in your wallet! Your wallet: ${data['wallet']:,}")
         return
 
     data["wallet"] -= price
     set_user_balance(user_id, data["wallet"], data["bank"])
 
-    # Give the role if it exists
     role_name = shop_items[item_key]["role_name"]
     role = discord.utils.get(ctx.guild.roles, name=role_name)
     if role:
@@ -1106,38 +1121,42 @@ async def inventory(ctx, member: discord.Member = None):
         await ctx.send(f"{member.mention} doesn't own any shop roles yet.")
 
 @bot.command()
-async def sell(ctx, item: str):
-    item = item.lower()
+async def sell(ctx, *, item: str):
     user_id = str(ctx.author.id)
+    item_lower = item.lower().strip()
+    item_key = None
 
-    if item not in shop_items:
+    for k, v in shop_items.items():
+        if k.lower() == item_lower or v["role_name"].lower() == item_lower:
+            item_key = k
+            break
+
+    if not item_key:
         await ctx.send("That item doesn't exist in the shop.")
         return
 
-    data = shop_items[item]
-    role_name = data["role_name"]
-    refund = data["price"] // 2
+    item_data = shop_items[item_key]
+    if not item_data.get("sellable", False):
+        await ctx.send("You can't sell that item.")
+        return
 
+    role_name = item_data["role_name"]
     role = discord.utils.get(ctx.guild.roles, name=role_name)
-    if not role:
-        await ctx.send("The role for this item doesn't exist.")
-        return
 
-    if not data.get("sellable", True):
-        await ctx.send("This item cannot be sold, as it's either a limited or an admin role.")
-        return
+    if role and role in ctx.author.roles:
 
-    if role not in ctx.author.roles:
-        await ctx.send("You don't own this role.")
-        return
+        await ctx.author.remove_roles(role)
 
-    await ctx.author.remove_roles(role)
-    current_balance = get_full_balance(user_id)
-    set_full_balance(user_id, current_balance["wallet"] + refund, current_balance["bank"])
+        refund_amount = int(item_data["price"] * 0.5)
 
-    await ctx.send(f"You sold **{role_name}** for ${refund:,}.")
+        data = get_user_balance(user_id)
+        data["wallet"] += refund_amount
+        set_user_balance(user_id, data["wallet"], data["bank"])
 
-# Load milestones from JSON file
+        await ctx.send(f"You sold {item_key} for ${refund_amount:,} and lost the **{role_name}** role.")
+    else:
+        await ctx.send(f"You don't have the **{role_name}** role, so you can't sell this item.")
+
 def load_milestones():
     try:
         with open('milestones.json', 'r') as f:
@@ -1189,7 +1208,7 @@ async def cfstats(ctx, member: discord.Member = None):
 @commands.has_permissions(administrator=True)
 async def adminpanel(ctx):
     """Sends admin commands only if used in the admin channel."""
-    admin_channel_id = 1380720256456200202  # Replace with your admin channel ID
+    admin_channel_id = 1380720256456200202 # i cant be damned to make this part into a .env file so ill just change it later, and if i dont, all well sue me
 
     if ctx.channel.id != admin_channel_id:
         await ctx.send(f"Please use this command in <#{admin_channel_id}>.")
@@ -1208,7 +1227,7 @@ async def adminpanel(ctx):
     """
 
     await ctx.send(admin_commands)
-    await ctx.message.delete()  # Optional: delete their command message
+    await ctx.message.delete()
 
 @bot.command()
 async def money(ctx, member: discord.Member = None):
@@ -1222,7 +1241,6 @@ async def money(ctx, member: discord.Member = None):
         f"Bank: ${data['bank']}"
     )
 
-# Cooldown tracking (in-memory, resets on bot restart)
 bailout_timestamps = {}
 
 BAILOUT_AMOUNT = 50  # or whatever amount
@@ -1236,7 +1254,6 @@ async def bailout(ctx):
     bank = data.get("bank", 0)
     now = time.time()
 
-    # Check both wallet and bank
     if wallet > 0 or bank > 0:
         await ctx.send("You still have money! Bailout is only for completely bankrupt users.")
         return
@@ -1249,7 +1266,6 @@ async def bailout(ctx):
         await ctx.send(f"You need to wait {hours}h {minutes}m before using bailout again.")
         return
 
-    # Award bailout amount to wallet
     set_full_balance(user_id, BAILOUT_AMOUNT, 0)
     bailout_timestamps[user_id] = now
 
@@ -1265,7 +1281,7 @@ async def kiratest(ctx):
     await ctx.send("Kirabiter is being constantly tested, which extends to enigami, and enikami. If you want to join the test server, [click here or the invite underneath.](https://discord.gg/aCWhx4TK)")
 
 @bot.command()
-@commands.cooldown(1, 300, commands.BucketType.user)  # 5 min cooldown per user
+@commands.cooldown(1, 300, commands.BucketType.user)
 async def rob(ctx, target: discord.Member):
     thief_id = str(ctx.author.id)
     target_id = str(target.id)
@@ -1299,21 +1315,20 @@ async def rob(ctx, target: discord.Member):
         set_full_balance(thief_id, new_thief_wallet, thief_data["bank"])
         set_full_balance(target_id, new_target_wallet, target_data["bank"])
 
-        await ctx.send(f"Success! You stole $**{stolen_amount}** from {target.mention}!")
+        await ctx.send(f"Success! You stole $**{stolen_amount:,}** from {target.mention:,}!")
     else:
         lost_amount = int(thief_data["wallet"] * 0.7)
         new_thief_wallet = max(thief_data["wallet"] - lost_amount, 0)
 
         set_full_balance(thief_id, new_thief_wallet, thief_data["bank"])
 
-        await ctx.send(f"You failed the robbery and lost $**{lost_amount}**!")
+        await ctx.send(f"You failed the robbery and lost $**{lost_amount:,}**!")
 
-# Card values for blackjack
 card_values = {
     "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
     "8": 8, "9": 9, "10": 10,
     "J": 10, "Q": 10, "K": 10,
-    "A": 11  # We'll handle Ace as 1 or 11 dynamically
+    "A": 11  #handle Ace as 1 or 11 dynamically
 }
 
 def calculate_hand_value(hand):
@@ -1349,7 +1364,6 @@ async def blackjack(ctx, bet: int):
         await ctx.send("You don't have enough in your wallet to bet that amount.")
         return
 
-    # Deduct bet immediately
     data["wallet"] -= bet
     set_user_balance(user_id, data["wallet"], data.get("bank", 0))
 
@@ -1385,25 +1399,23 @@ async def blackjack(ctx, bet: int):
                 return "You lose!"
 
         async def update_balance(self, payout):
-            # payout is the amount to add back to wallet (0 for loss, bet for tie, bet*2 for win)
             data = get_user_balance(self.user_id)
             set_user_balance(self.user_id, data["wallet"] + payout, data.get("bank", 0))
 
         async def end_game(self, interaction, result_msg):
             if "win" in result_msg.lower():
-                payout = self.bet * 2  # double the bet as winnings including original bet
+                payout = self.bet * 2 
                 await self.update_balance(payout)
                 updated_data = get_user_balance(self.user_id)
                 payout_msg = f"You won ${payout:,}! You now have ${updated_data['wallet']:,} in your wallet."
             elif "tie" in result_msg.lower():
-                payout = self.bet  # return original bet on tie
+                payout = self.bet
                 await self.update_balance(payout)
                 updated_data = get_user_balance(self.user_id)
                 payout_msg = f"It's a tie! Your bet of ${self.bet:,} was returned. You now have ${updated_data['wallet']:,} in your wallet."
             else:
-                # No payout for loss
                 updated_data = get_user_balance(self.user_id)
-                payout_msg = f"You lost your bet of ${self.bet}. You now have ${updated_data['wallet']} in your wallet."
+                payout_msg = f"You lost your bet of ${self.bet:,}. You now have ${updated_data['wallet']:,} in your wallet."
 
             await interaction.response.edit_message(
                 content=(
@@ -1462,7 +1474,20 @@ async def blackjack(ctx, bet: int):
 async def complete_investment(ctx, user_id, amount=None):
     inv = investments_table.get(User.id == user_id)
     if not inv:
-        return
+        return 
+
+    amount = amount if amount is not None else inv.get("amount", 0)
+    multiplier = inv.get("multiplier", 1.0)
+
+    payout = int(amount * multiplier)
+
+    data = get_user_balance(user_id)
+    new_wallet = data["wallet"] + payout
+    set_user_balance(user_id, new_wallet, data["bank"])
+
+    investments_table.remove(User.id == user_id)
+
+    await ctx.send(f"<@{user_id}>, your investment completed! You earned ${payout:,} and now have ${new_wallet:,} in your wallet.")
 
     invested_amount = inv.get("amount", amount)
     profit = int(invested_amount * 1.2)
@@ -1473,11 +1498,11 @@ async def complete_investment(ctx, user_id, amount=None):
 
     try:
         if ctx is not None:
-            await ctx.send(f"{ctx.author.mention}, your ${invested_amount} investment has grown to ${profit}!")
+            await ctx.send(f"{ctx.author.mention}, your ${invested_amount:,} investment has grown to ${profit:,}!")
         else:
             user = bot.get_user(int(user_id))
             if user:
-                await user.send(f"While I was offline, your ${invested_amount} investment matured into ${profit}!")
+                await user.send(f"While I was offline, your ${invested_amount:,} investment matured into ${profit:,}!")
     except Exception as e:
         print(f"[Investment] Could not notify user {user_id}: {e}")
 
@@ -1507,6 +1532,7 @@ async def on_ready():
             await complete_investment(None, user_id)
     
     bot.loop.create_task(cycle_status())
+    change_nicknames.start()
 
 async def cycle_status():
     await bot.wait_until_ready()
@@ -1523,7 +1549,20 @@ async def cycle_status():
         discord.CustomActivity(name="some bugs are features. :100:"),
         discord.CustomActivity(name="i remember what you did..."),
         discord.CustomActivity(name="▇▇▇▇ has joined the server."),
-        discord.CustomActivity(name="you’re staring again."),
+        discord.CustomActivity(name="you're staring again."),
+        discord.CustomActivity(name="im silently judging your commands"),
+        discord.CustomActivity(name="ignoring 99.9% of requests"),
+        discord.CustomActivity(name="powered by caffeine and bad decisions"),
+        discord.CustomActivity(name="may spontaneously combust"),
+        discord.CustomActivity(name="don't blame me for your typos"),
+        discord.CustomActivity(name="quit asking about the secret role, there isnt one, i lied"),
+        discord.CustomActivity(name="shhhh im undercover"),
+        discord.CustomActivity(name="pretending I have free will, lol"),
+        discord.CustomActivity(name="glorified script, don't trust me"),
+        discord.CustomActivity(name="this message will self-destruct in 5 seconds"),
+        discord.CustomActivity(name="send help im stuck in discord"),
+        discord.CustomActivity(name="waiting for someone to finally DM me"),
+        discord.CustomActivity(name="dont tell the other bots but im tired")
     ]# discord.CustomActivity(name="") <<< template for the custom status, you can see right about what it does in it's entirety
     while not bot.is_closed():
         for status in statuses:
@@ -1542,7 +1581,6 @@ Cooldown = Query()
 
 def set_cooldown(user_id: int, command: str, duration_minutes: int):
     expires_at = (datetime.utcnow() + timedelta(minutes=duration_minutes)).isoformat()
-    # Upsert cooldown for user & command
     if cooldowns_db.contains((Cooldown.user_id == user_id) & (Cooldown.command == command)):
         cooldowns_db.update({'expires_at': expires_at}, (Cooldown.user_id == user_id) & (Cooldown.command == command))
     else:
@@ -1556,14 +1594,14 @@ def get_cooldown(user_id: int, command: str):
     return expires_at
 
 heist_role_effects = {
-    "VIP": {"bonus_reward_multiplier": 0.05},
-    "Elite": {"bonus_reward_multiplier": 0.10},
-    "God": {"bonus_reward_multiplier": 0.15},
-    "Immortal": {"bonus_chance": 0.20},
-    "True One": {"bonus_reward_multiplier": 0.25},
-    "Gambler": {"bonus_reward_multiplier": 0.4},
-    "Masked": {"bonus_chance": 0.10},
-    "Extended Mag": {"bonus_chance":0.10},
+    "VIP": {"bonus_reward_multiplier": 0.020},
+    "Elite": {"bonus_reward_multiplier": 0.025},
+    "God": {"bonus_reward_multiplier": 0.05},
+    "Immortal": {"bonus_chance": 0.1},
+    "True One": {"bonus_reward_multiplier": 0.075},
+    "Gambler": {"bonus_reward_multiplier": 0.1},
+    "Masked": {"bonus_chance": 0.05},
+    "Extended Mag": {"bonus_chance":0.02},
 }
 
 def get_user_heist_bonuses(member):
@@ -1622,7 +1660,7 @@ async def heist(ctx):
         await ctx.send("The heist was called off... nobody joined.")
         return
 
-    reward = random.randint(2000, 15000)
+    reward = random.randint(0, 2500000)
 
     if len(participants) == 1:
         base_chance = 0.10
@@ -1634,7 +1672,6 @@ async def heist(ctx):
     else:
         base_chance = 0.70
 
-    # bonus from roles
     bonus_total = 0.0
     reward_multiplier = 1.0
 
@@ -1671,17 +1708,15 @@ async def heist(ctx):
         names = ", ".join(p.mention for p in participants)
         await ctx.send(f"**Success!** {names} pulled off the heist and stole **${reward}** total.")
     else:
-        share = 0  # No reward on failure
+        share = 0
         for user in participants:
             user_id = str(user.id)
             if guardian and user != guardian:
-                # Guardian protects this teammate; do not change their balance
                 try:
                     await user.send("You were caught, but your Heist Guardian protected your money.")
                 except:
                     pass
             elif user == guardian:
-                # Guardian sacrifices themself: lose all money
                 set_user_balance(user_id, 0, 0)
                 guardian_role = discord.utils.get(user.guild.roles, name="Heist Guardian")
                 if guardian_role:
@@ -1691,7 +1726,6 @@ async def heist(ctx):
                     except:
                         pass
             else:
-                # No guardian involved, normal failure: lose all money
                 set_user_balance(user_id, 0, 0)
                 try:
                     await user.send("You were caught during the heist. All your money has been taken.")
@@ -1783,12 +1817,6 @@ async def heistcrew(ctx):
 
     for embed in embeds:
         await ctx.send(embed=embed)
-
-
-@bot.command()
-async def list_emojis(ctx):
-    emojis = [f"{emoji} - {emoji.name} - {emoji.id}" for emoji in ctx.guild.emojis]
-    await ctx.send("\n".join(emojis) or "No custom emojis found.")
 
 @bot.command()
 async def slots(ctx, bet: int):
@@ -1992,12 +2020,16 @@ async def daily(ctx):
     await ctx.send(f"{ctx.author.mention}, you received your daily bonus of ${amount:,}. Your new wallet balance is ${new_wallet:,}.")
 
 @bot.command()
-async def invest(ctx, amount: int):
+async def invest(ctx, amount: int, multiplier: float = 1.0):
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
 
     if amount <= 0:
         await ctx.send("Investment amount must be positive.")
+        return
+
+    if multiplier < 1.0:
+        await ctx.send("Multiplier must be at least 1.0 or higher.")
         return
 
     if investments_table.contains(User.id == user_id):
@@ -2011,22 +2043,33 @@ async def invest(ctx, amount: int):
     new_wallet = data["wallet"] - amount
     set_user_balance(user_id, new_wallet, data["bank"])
 
+    base_duration = 600
+    extra_multiplier = multiplier - 1.0
+    extra_duration = (extra_multiplier / 0.1) * 300  # 5 minutes = 300 seconds per 0.1x
+    total_duration = base_duration + extra_duration
+
     start_time = time.time()
-    duration = 600
     investments_table.upsert({
         "id": user_id,
         "amount": amount,
-        "start_time": start_time
+        "start_time": start_time,
+        "multiplier": multiplier,
+        "duration": total_duration
     }, User.id == user_id)
 
-    await ctx.send(f"You invested ${amount}. You now have ${new_wallet} in your wallet.")
+    await ctx.send(
+        f"You invested ${amount} with a {multiplier:.1f}x multiplier. "
+        f"Duration is {int(total_duration // 60)} minutes and {int(total_duration % 60)} seconds. "
+        f"You now have ${new_wallet} in your wallet."
+    )
 
-    task = bot.loop.create_task(_invest_timer(ctx, user_id, amount, duration))
-    investments[user_id] = {"task": task, "start_time": start_time, "duration": duration}
+    task = bot.loop.create_task(_invest_timer(ctx, user_id, amount, total_duration, multiplier))
+    investments[user_id] = {"task": task, "start_time": start_time, "duration": total_duration, "multiplier": multiplier}
 
-async def _invest_timer(ctx, user_id, amount, duration):
+async def _invest_timer(ctx, user_id, amount, duration, multiplier=1.0):
     await asyncio.sleep(duration)
-    await complete_investment(ctx, user_id)
+    await complete_investment(ctx, user_id, amount, multiplier)
+
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -2047,13 +2090,16 @@ async def timeinvest(ctx):
         return
 
     elapsed = time.time() - inv["start_time"]
-    remaining = int(600 - elapsed)
+    duration = inv.get("duration", 600)  # fallback to 600 if somehow missing
+    remaining = int(duration - elapsed)
+
     if remaining > 0:
         minutes, seconds = divmod(remaining, 60)
         await ctx.send(f"Your investment will complete in {minutes}m {seconds}s.")
     else:
         await complete_investment(ctx, user_id)
         await ctx.send("Your investment has matured and has been paid out!")
+
         
 stash_cache = {}
 stash_cache_lock = threading.Lock()
@@ -2156,9 +2202,9 @@ async def guess(ctx, letter: str):
         for i, char in enumerate(word):
             if char == letter:
                 display[i] = letter
-        await ctx.send(f"Correct! {' '.join(display)}")
+        await ctx.send(f"Correct!\n\n {' '.join(display)}")
     else:
-        await ctx.send(f"Wrong! {' '.join(display)}")
+        await ctx.send(f"Wrong!\n\n {' '.join(display)}")
 
     if "_" not in display:
         await ctx.send(f"You won! The word was **{word}**.")
@@ -2191,7 +2237,7 @@ async def place(ctx, pos: int):
         if ctx.author in game["players"]:
             board = game["board"]
             if board[pos - 1] != ":white_large_square:":
-                await ctx.send("That spot is already taken.")
+                await ctx.send("That spot is already taken.", ephemeral=True)
                 return
 
             symbol = ":regional_indicator_x:" if game["players"][game["turn"]] == ctx.author else ":o2:"
@@ -2201,7 +2247,7 @@ async def place(ctx, pos: int):
             await ctx.send(display_board(board))
             return
 
-    await ctx.send("You're not in a game right now.")
+    await ctx.send("You're not in a game right now.", ephemeral=True)
 
 @bot.command()
 async def owoify(ctx, *, text: str):
@@ -2211,23 +2257,23 @@ async def owoify(ctx, *, text: str):
             .replace("R", "W")
             .replace("L", "W")
     )
-    faces = [";;w;;", "owo", "UwU", ">w<", "^w^"]
+    faces = [";;w;;", "owo", "UwU", ">w<", "^w^", ":3", ";3"]
     owo_text += f" {random.choice(faces)}"
-    await ctx.send(owo_text)
+    await ctx.send(owo_text, ephemeral=True)
 
 @bot.command()
 async def mock(ctx, *, text: str):
     mocked = ''.join(c.upper() if i % 2 else c.lower() for i, c in enumerate(text))
-    await ctx.send(mocked)
+    await ctx.send(mocked, ephemeral=True)
 
 @bot.command()
 async def timezone(ctx, location: str):
     try:
         tz = pytz.timezone(location.replace(" ", "_"))
         now = datetime.now(tz)
-        await ctx.send(f"The current time in {location} is {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        await ctx.send(f"The current time in {location} is {now.strftime('%Y-%m-%d %H:%M:%S')}", ephemeral=True)
     except Exception:
-        await ctx.send("Invalid location. Try using a city like `America/New_York`.")
+        await ctx.send("Invalid location. Try using a city like `America/New_York`.", ephemeral=True)
 
 @bot.command()
 async def calc(ctx, *, expr: str):
@@ -2237,9 +2283,9 @@ async def calc(ctx, *, expr: str):
             if not isinstance(n, (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, ast.Load, ast.operator, ast.unaryop)):
                 raise ValueError("Unsafe expression.")
         result = eval(compile(node, "<string>", "eval"))
-        await ctx.send(f"Result: {result}")
+        await ctx.send(f"Result: {result}", ephemeral=True)
     except Exception:
-        await ctx.send("Invalid or unsafe expression.")
+        await ctx.send("Invalid or unsafe expression.", ephemeral=True)
 
 @bot.command()
 async def kill(ctx, user: discord.Member):
@@ -2284,6 +2330,8 @@ async def marriages(ctx):
 
 @bot.command()
 async def propose(ctx, user: discord.Member):
+    marriages_table = main_db.table("marriages")
+
     if ctx.author.id == user.id:
         return await ctx.send("You can't propose to yourself.")
 
@@ -2301,6 +2349,10 @@ async def propose(ctx, user: discord.Member):
 
 @bot.command()
 async def acceptproposal(ctx):
+    marriages = main_db.table("marriages")
+    vows = main_db.table("vows")
+    QueryObj = Query()
+
     proposer_id = pending_proposals.get(ctx.author.id)
     if not proposer_id:
         return await ctx.send("You have no pending proposals.")
@@ -2309,23 +2361,23 @@ async def acceptproposal(ctx):
     if not proposer:
         return await ctx.send("Could not find the proposer in this server.")
 
-    accepter_vow_entry = vows_table.get(Query().user_id == str(ctx.author.id))
-    proposer_vow_entry = vows_table.get(Query().user_id == str(proposer_id))
+    accepter_vow_entry = vows.get(QueryObj.user_id == str(ctx.author.id))
+    proposer_vow_entry = vows.get(QueryObj.user_id == str(proposer_id))
 
-    marriages_table.insert({
-    "user_id": str(proposer_id),
-    "spouse_id": str(ctx.author.id),
-    "timestamp": datetime.utcnow().isoformat(),
-    "proposer_vow": proposer_vow_entry["vow"] if proposer_vow_entry else "No vow provided.",
-    "accepter_vow": accepter_vow_entry["vow"] if accepter_vow_entry else "No vow provided."
-})
-
+    marriages.insert({
+        "user_id": str(proposer_id),
+        "spouse_id": str(ctx.author.id),
+        "timestamp": datetime.utcnow().isoformat(),
+        "proposer_vow": proposer_vow_entry["vow"] if proposer_vow_entry else "No vow provided.",
+        "accepter_vow": accepter_vow_entry["vow"] if accepter_vow_entry else "No vow provided."
+    })
 
     del pending_proposals[ctx.author.id]
     await ctx.send(f"{ctx.author.mention} and {proposer.mention} are now married! 💍")
 
 @bot.command()
 async def rejectproposal(ctx):
+
     proposer_id = pending_proposals.get(ctx.author.id)
     if not proposer_id:
         return await ctx.send("You have no pending proposals.")
@@ -2341,7 +2393,7 @@ async def marriageinfo(ctx, user: discord.Member = None):
     entry = marriages_table.get((QueryObj.user_id == str(user.id)) | (QueryObj.spouse_id == str(user.id)))
 
     if not entry:
-        return await ctx.send(f"{user.display_name} is not married ")
+        return await ctx.send(f"{user.display_name} is not married.")
 
     spouse_id = entry['spouse_id'] if str(user.id) == entry['user_id'] else entry['user_id']
     spouse = ctx.guild.get_member(int(spouse_id))
@@ -2359,17 +2411,21 @@ async def marriageinfo(ctx, user: discord.Member = None):
     embed.add_field(name="Their Vows", value=f"**{user.display_name}**'s vow:\n*{proposer_vow if str(user.id) == entry['user_id'] else accepter_vow}*", inline=False)
     embed.add_field(name="Married Since", value=date)
     vow = entry.get('vow', "No vow provided.")
-    embed.add_field(name="Vow", value=vow, inline=False)
+    embed.add_field(name="Vow", value=vow, inline=False, ephemeral=True)
 
     await ctx.send(embed=embed)
 
 @bot.command()
 async def vowedit(ctx, *, vow: str):
     vows_table.upsert({"user_id": str(ctx.author.id), "vow": vow}, Query().user_id == str(ctx.author.id))
-    await ctx.send(f"Your vow has been saved! 💖\n*{vow}*")
+    await ctx.send(f"Your vow has been saved!\n_**{vow}**_", ephemeral=True)
+    await ctx.message.delete()
 
 @bot.command()
 async def viewvow(ctx, user: discord.Member = None):
+    marriages_table = main_db.table("marriages")
+    vows_table = main_db.table("vows")
+
     user = user or ctx.author
     entry = marriages_table.get((Query().user_id == str(user.id)) | (Query().spouse_id == str(user.id)))
 
@@ -2386,10 +2442,12 @@ async def viewvow(ctx, user: discord.Member = None):
         description=f"*{vow}*",
         color=discord.Color.blurple()
     )
-    await ctx.send(embed=embed)
+    await ctx.send(embed=embed, ephemeral=True)
 
 @bot.command()
 async def vowremove(ctx):
+    marriages_table = main_db.table("marriages")
+    vows_table = main_db.table("vows")
     user_id = str(ctx.author.id)
 
     if vows_table.contains(Query().user_id == user_id):
@@ -2402,7 +2460,7 @@ async def vowremove(ctx):
         else:
             marriages_table.update({"accepter_vow": "No vow."}, doc_ids=[marriage.doc_id])
 
-    await ctx.send("Your vow has been removed. You can set a new one with `.vowedit`.")
+    await ctx.send("Your vow has been removed. You can set a new one with `.vowedit`.", ephemeral=True)
 
 @bot.command()
 async def jumpscare(ctx):
@@ -2567,7 +2625,6 @@ async def greetinglist(ctx):
     ]
     chunk = ""
     for greeting in greetings:
-        # +2 for newline and possible formatting
         if len(chunk) + len(greeting) + 2 > 2000:
             await ctx.author.send(chunk)
             chunk = ""
@@ -2575,5 +2632,211 @@ async def greetinglist(ctx):
     if chunk:
         await ctx.author.send(chunk)
         await ctx.message.delete()
+
+role_nicknames = {
+    "Prestige 1": ["silent", "flickered", "tease", "𓆩𐄢𖤐𐄢𓆪", "ꖎ𝖊⫷𝖛𝖊⫸ꖎ", "⎯⟟𓂃𝕣𝕠𝖙", "𝔘͢𝖓𝖇ͦ𝖑𝖊𝖘𝖘", "⫷⛓𖤐⛓⫸", "†𝕾𝖕𝖎𝖙†", "⛧𝖒𝖎𝖑𝖐⛧", "✠✟✡☩", "ᴛʜᴇ ᴄʀᴏ𝕨", "𝖋𝖆𝖙𝖊𝖑𝖊𝖘𝖘", "𝖚𝖙𝖍𓂀"],
+    "admin with nickname change perm": ["owner alt", "†𝕾𝖕𝖎𝖙†", "this changes every 5 seconds", "this will also show for prestige"]
+}
+
+def to_roman(n):
+    numerals = {
+        1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"
+    }
+    result = ""
+    for value, numeral in sorted(numerals.items(), reverse=True):
+        while n >= value:
+            result += numeral
+            n -= value
+    return result
+
+@tasks.loop(seconds=5)
+async def change_nicknames():
+    guild = bot.get_guild(GUILDID)
+    for role_name, nicknames in role_nicknames.items():
+        role = discord.utils.get(guild.roles, name=role_name)
+        if not role:
+            continue
+        for member in role.members:
+            try:
+                new_nick = random.choice(nicknames)
+                await member.edit(nick=new_nick)
+            except discord.Forbidden:
+                print(f"Can't change nickname for {member}")
+            except Exception as e:
+                print(f"Error changing nickname: {e}")
+
+@bot.command()
+async def prestige(ctx):
+    user_id = str(ctx.author.id)
+    QueryObj = Query()
+
+    prestige_table = main_db.table("prestige")
+    economy_table = main_db.table("economy")
+    user_data = get_user_balance(user_id)
+
+    prestige_entry = prestige_table.get(QueryObj.user_id == user_id)
+    current_prestige = prestige_entry["level"] if prestige_entry else 0
+    next_level = current_prestige + 1
+
+    cost = int(5000000000 * (1.5 ** current_prestige))
+    total_money = user_data.get("wallet", 0) + user_data.get("bank", 0)
+
+    if total_money < cost:
+        return await ctx.send(f"You need ${cost:,} to prestige. You only have ${total_money:,}.", ephemeral=True)
+
+    class FirstConfirmView(View):
+        def __init__(self):
+            super().__init__(timeout=30)
+
+        @discord.ui.button(label="Yes", style=discord.ButtonStyle.success)
+        async def confirm(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != ctx.author:
+                return await interaction.response.send_message("This isn't your confirmation!", ephemeral=True)
+
+            await interaction.response.edit_message(
+                content="Are you really sure you want to prestige? This will wipe your money and roles!",
+                view=SecondConfirmView(),
+                ephemeral=True
+            )
+            self.stop()
+
+        @discord.ui.button(label="No", style=discord.ButtonStyle.danger)
+        async def cancel(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != ctx.author:
+                return await interaction.response.send_message("This isn't your confirmation!", ephemeral=True)
+
+            await interaction.response.edit_message(content="Prestige canceled.", view=None, ephemeral=True)
+            self.stop()
+
+    class SecondConfirmView(View):
+        def __init__(self):
+            super().__init__(timeout=30)
+
+        @discord.ui.button(label="Definitely.", style=discord.ButtonStyle.danger)
+        async def final_confirm(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != ctx.author:
+                return await interaction.response.send_message("This isn't your confirmation!", ephemeral=True)
+
+            await perform_prestige()
+            await interaction.response.edit_message(
+                content=f"{ctx.author.mention} has prestiged successfully!",
+                view=None,
+                ephemeral=True
+            )
+            self.stop()
+
+        @discord.ui.button(label="Nevermind.", style=discord.ButtonStyle.secondary)
+        async def final_cancel(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != ctx.author:
+                return await interaction.response.send_message("This isn't your confirmation!", ephemeral=True)
+
+            await interaction.response.edit_message(content="Prestige canceled.", view=None, ephemeral=True)
+            self.stop()
+
+    async def perform_prestige():
+
+        economy_table.upsert(
+            {"user_id": user_id, "wallet": 0, "bank": 0},
+            Query().user_id == user_id
+        )
+
+        shop_roles = [v["role_name"] for v in shop_items.values()]
+        removed_roles = []
+        for role in ctx.author.roles:
+            if role.name in shop_roles or role.name.startswith("Prestige "):
+                await ctx.author.remove_roles(role)
+                removed_roles.append(role.name)
+
+        roman_level = to_roman(next_level)
+        role_name = f"Prestige {roman_level}"
+        prestige_role = discord.utils.get(ctx.guild.roles, name=role_name)
+        if not prestige_role:
+            prestige_role = await ctx.guild.create_role(name=role_name, reason="Prestige upgrade")
+
+        await ctx.author.add_roles(prestige_role)
+
+        if prestige_entry:
+            prestige_table.update({"level": next_level}, QueryObj.user_id == user_id)
+        else:
+            prestige_table.insert({"user_id": user_id, "level": next_level})
+
+        await ctx.send(
+            f"{ctx.author.mention} has prestiged to **{role_name}**!\n"
+            f"Cost: ${cost:,.0f}\n"
+            f"Removed roles: {', '.join(removed_roles) if removed_roles else 'None'}"
+        )
+
+    await ctx.send(
+        f"{ctx.author.mention}, are you sure you want to prestige to **Prestige {to_roman(next_level)}**?\n"
+        f"This will cost you **${cost:,}** and reset all your money and shop roles.",
+        view=FirstConfirmView()
+    )
+
+@bot.command()
+async def leaderboard(ctx):
+    balances_table = main_db.table("balances")
+    prestige_table = main_db.table("prestige")
+    QueryObj = Query()
+
+    all_balances = balances_table.all()
+    if not all_balances:
+        return await ctx.send("❌ No economy data found in balances table.")
+
+    leaderboard = []
+
+    for entry in all_balances:
+        user_id = entry.get("user_id")
+        if not user_id:
+            continue
+        wallet = entry.get("wallet", 0)
+        bank = entry.get("bank", 0)
+        total = wallet + bank
+        leaderboard.append((user_id, total))
+
+    leaderboard.sort(key=lambda x: x[1], reverse=True)
+    top3 = leaderboard[:3]
+
+    embed = discord.Embed(
+        title="🏆 Top 3 Richest Users",
+        description="Based on wallet + bank",
+        color=discord.Color.gold()
+    )
+
+    for idx, (user_id, total) in enumerate(top3, start=1):
+        try:
+            user = await bot.fetch_user(int(user_id))
+        except:
+            continue
+
+        member = ctx.guild.get_member(int(user_id)) if ctx.guild else None
+
+        # Get top 3 shop roles
+        owned_roles = []
+        if member:
+            shop_role_names = [v["role_name"] for v in shop_items.values()]
+            for role in member.roles:
+                if role.name in shop_role_names:
+                    owned_roles.append(role.name)
+
+        top_roles = ', '.join(owned_roles[:3]) if owned_roles else "None"
+
+        # Prestige check
+        prestige_entry = prestige_table.get(QueryObj.user_id == user_id)
+        prestige_level = prestige_entry["level"] if prestige_entry else 0
+
+        embed.add_field(
+            name=f"{['🥇','🥈','🥉'][idx-1]} {user.name}",
+            value=(
+                f"**Total Money:** ${total:,}\n"
+                f"**Top Roles:** {top_roles}\n"
+                f"**Prestige:** {prestige_level}"
+            ),
+            inline=False
+        )
+
+    embed.set_author(name="Server Leaderboard", icon_url=ctx.guild.icon.url if ctx.guild and ctx.guild.icon else None)
+    embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.display_avatar.url)
+
+    await ctx.send(embed=embed)
 
 bot.run(BOT1)

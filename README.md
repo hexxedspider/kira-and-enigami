@@ -14,4 +14,4 @@ enigami is a bot I made, which I jokingly used [r34](rule34.xxx) API as a test, 
 
 uses a dollar sign ($) for commands.
 
-enikami is another NSFW bot, but this time with timer support. Only for Rule34, currently.
+enikami is another NSFW bot, but for different commands this time.

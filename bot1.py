@@ -1223,7 +1223,7 @@ async def adminpanel(ctx):
     - `.unmute @user` - Remove the Muted role from a user.
     - `.clear <number>` - Bulk delete messages in the current channel.
     - `.giverole @user role_name` - Give a role to a user.
-    - `.money @user role_name [amount]` - Give money to a user, only used for testing purposes. Only works in servers, NOT DMs.
+    - `.setbal @user [amount]` - Give money to a user, only used for testing purposes. Only works in servers, NOT DMs.
     """
 
     await ctx.send(admin_commands)
@@ -1237,8 +1237,8 @@ async def money(ctx, member: discord.Member = None):
     data = get_user_balance(user_id)
     await ctx.send(
         f"{member.display_name}'s balance:\n"
-        f"Wallet: ${data['wallet']}\n"
-        f"Bank: ${data['bank']}"
+        f"Wallet: ${data['wallet']:,}\n"
+        f"Bank: ${data['bank']:,}"
     )
 
 bailout_timestamps = {}
@@ -1820,6 +1820,55 @@ async def heistcrew(ctx):
 
 @bot.command()
 async def slots(ctx, bet: int):
+    import random
+    from collections import Counter
+
+    user_id = str(ctx.author.id)
+    data = get_user_balance(user_id)
+
+    if bet <= 0:
+        await ctx.send("You must bet a positive amount.")
+        return
+
+    if data["wallet"] < bet:
+        await ctx.send("You don't have enough money in your wallet to place that bet.")
+        return
+
+    symbols = ["🍒", "🍋", "🍊", "🍇", "💎"]
+    result = [random.choice(symbols) for _ in range(5)]
+
+    counts = Counter(result)
+    occurrences = sorted(counts.values(), reverse=True)
+
+    payout = 0
+
+    if occurrences == [5]:
+        payout = int(bet * 8)
+        outcome = f"JACKPOT! You won ${payout:,}!"
+    elif occurrences == [4, 1]:
+        payout = int(bet * 5)
+        outcome = f"Nice! 4 matched, you won ${payout:,}!"
+    elif occurrences == [3, 2]:
+        payout = int(bet * 4)
+        outcome = f"You got a full house and won ${payout:,}!"
+    elif 3 in occurrences:
+        payout = int(bet * 3)
+        outcome = f"You got 3 matches and won ${payout:,}!"
+    elif occurrences == [2, 2, 1]:
+        payout = int(bet * 1.5)
+        outcome = f"Two pairs! You won ${payout:,}!"
+    else:
+        data["wallet"] -= bet
+        set_user_balance(user_id, data["wallet"], data["bank"])
+        await ctx.reply(f"{' - '.join(result)}\nYou lost.\nYou now have ${data['wallet']:,} in your wallet.")
+        return
+
+    data["wallet"] += payout
+    set_user_balance(user_id, data["wallet"], data["bank"])
+    await ctx.reply(f"{' - '.join(result)}\n{outcome}\nYou now have ${data['wallet']:,} in your wallet.")
+
+@bot.command()
+async def oldslots(ctx, bet: int):
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
 
@@ -2028,8 +2077,8 @@ async def invest(ctx, amount: int, multiplier: float = 1.0):
         await ctx.send("Investment amount must be positive.")
         return
 
-    if multiplier < 1.0:
-        await ctx.send("Multiplier must be at least 1.0 or higher.")
+    if multiplier < 1.1:
+        await ctx.send("Multiplier must be at least 1.1 or higher.")
         return
 
     if investments_table.contains(User.id == user_id):
@@ -2043,9 +2092,9 @@ async def invest(ctx, amount: int, multiplier: float = 1.0):
     new_wallet = data["wallet"] - amount
     set_user_balance(user_id, new_wallet, data["bank"])
 
-    base_duration = 600
+    base_duration = 300
     extra_multiplier = multiplier - 1.0
-    extra_duration = (extra_multiplier / 0.1) * 300  # 5 minutes = 300 seconds per 0.1x
+    extra_duration = (extra_multiplier / 0.1) * 600  # 5 minutes = 300 seconds per 0.1x
     total_duration = base_duration + extra_duration
 
     start_time = time.time()
@@ -2058,9 +2107,9 @@ async def invest(ctx, amount: int, multiplier: float = 1.0):
     }, User.id == user_id)
 
     await ctx.send(
-        f"You invested ${amount} with a {multiplier:.1f}x multiplier. "
+        f"You invested ${amount:,} with a {multiplier:.1f}x multiplier. "
         f"Duration is {int(total_duration // 60)} minutes and {int(total_duration % 60)} seconds. "
-        f"You now have ${new_wallet} in your wallet."
+        f"You now have ${new_wallet:,} in your wallet."
     )
 
     task = bot.loop.create_task(_invest_timer(ctx, user_id, amount, total_duration, multiplier))
@@ -2079,7 +2128,7 @@ async def cinv(ctx):
     inv = investments.pop(user_id, None)
     if inv and "task" in inv:
         inv["task"].cancel()
-    await ctx.send("Your investment record has been cleared.")
+    await ctx.send("Your investment record has been cleared. Not refunded.")
 
 @bot.command()
 async def timeinvest(ctx):
@@ -2099,7 +2148,6 @@ async def timeinvest(ctx):
     else:
         await complete_investment(ctx, user_id)
         await ctx.send("Your investment has matured and has been paid out!")
-
         
 stash_cache = {}
 stash_cache_lock = threading.Lock()
@@ -2364,16 +2412,28 @@ async def acceptproposal(ctx):
     accepter_vow_entry = vows.get(QueryObj.user_id == str(ctx.author.id))
     proposer_vow_entry = vows.get(QueryObj.user_id == str(proposer_id))
 
+    accepter_vow = accepter_vow_entry["vow"] if accepter_vow_entry else "No vow provided."
+    proposer_vow = proposer_vow_entry["vow"] if proposer_vow_entry else "No vow provided."
+
     marriages.insert({
         "user_id": str(proposer_id),
         "spouse_id": str(ctx.author.id),
         "timestamp": datetime.utcnow().isoformat(),
-        "proposer_vow": proposer_vow_entry["vow"] if proposer_vow_entry else "No vow provided.",
-        "accepter_vow": accepter_vow_entry["vow"] if accepter_vow_entry else "No vow provided."
+        "proposer_vow": proposer_vow,
+        "accepter_vow": accepter_vow
     })
 
     del pending_proposals[ctx.author.id]
-    await ctx.send(f"{ctx.author.mention} and {proposer.mention} are now married! 💍")
+
+    embed = discord.Embed(
+        title="💍 A New Marriage!",
+        description=f"{ctx.author.mention} and {proposer.mention} are now married!",
+        color=discord.Color.gold()
+    )
+    embed.add_field(name=f"{proposer.display_name}'s Vow", value=f"*{proposer_vow}*", inline=False)
+    embed.add_field(name=f"{ctx.author.display_name}'s Vow", value=f"*{accepter_vow}*", inline=False)
+
+    await ctx.send(embed=embed)
 
 @bot.command()
 async def rejectproposal(ctx):
@@ -2634,8 +2694,7 @@ async def greetinglist(ctx):
         await ctx.message.delete()
 
 role_nicknames = {
-    "Prestige 1": ["silent", "flickered", "tease", "𓆩𐄢𖤐𐄢𓆪", "ꖎ𝖊⫷𝖛𝖊⫸ꖎ", "⎯⟟𓂃𝕣𝕠𝖙", "𝔘͢𝖓𝖇ͦ𝖑𝖊𝖘𝖘", "⫷⛓𖤐⛓⫸", "†𝕾𝖕𝖎𝖙†", "⛧𝖒𝖎𝖑𝖐⛧", "✠✟✡☩", "ᴛʜᴇ ᴄʀᴏ𝕨", "𝖋𝖆𝖙𝖊𝖑𝖊𝖘𝖘", "𝖚𝖙𝖍𓂀"],
-    "admin with nickname change perm": ["owner alt", "†𝕾𝖕𝖎𝖙†", "this changes every 5 seconds", "this will also show for prestige"]
+    "Prestige 1": ["silent", "flickered", "tease", "𓆩𐄢𖤐𐄢𓆪", "ꖎ𝖊⫷𝖛𝖊⫸ꖎ", "⎯⟟𓂃𝕣𝕠𝖙", "𝔘͢𝖓𝖇ͦ𝖑𝖊𝖘𝖘", "⫷⛓𖤐⛓⫸", "†𝕾𝖕𝖎𝖙†", "⛧𝖒𝖎𝖑𝖐⛧", "✠✟✡☩", "ᴛʜᴇ ᴄʀᴏ𝕨", "𝖋𝖆𝖙𝖊𝖑𝖊𝖘𝖘", "𝖚𝖙𝖍𓂀"]
 }
 
 def to_roman(n):
@@ -2678,7 +2737,7 @@ async def prestige(ctx):
     current_prestige = prestige_entry["level"] if prestige_entry else 0
     next_level = current_prestige + 1
 
-    cost = int(5000000000 * (1.5 ** current_prestige))
+    cost = int(50000000000 * (1.5 ** current_prestige))
     total_money = user_data.get("wallet", 0) + user_data.get("bank", 0)
 
     if total_money < cost:
@@ -2696,7 +2755,6 @@ async def prestige(ctx):
             await interaction.response.edit_message(
                 content="Are you really sure you want to prestige? This will wipe your money and roles!",
                 view=SecondConfirmView(),
-                ephemeral=True
             )
             self.stop()
 
@@ -2705,7 +2763,7 @@ async def prestige(ctx):
             if interaction.user != ctx.author:
                 return await interaction.response.send_message("This isn't your confirmation!", ephemeral=True)
 
-            await interaction.response.edit_message(content="Prestige canceled.", view=None, ephemeral=True)
+            await interaction.response.edit_message(content="Prestige canceled.", view=None)
             self.stop()
 
     class SecondConfirmView(View):
@@ -2717,12 +2775,7 @@ async def prestige(ctx):
             if interaction.user != ctx.author:
                 return await interaction.response.send_message("This isn't your confirmation!", ephemeral=True)
 
-            await perform_prestige()
-            await interaction.response.edit_message(
-                content=f"{ctx.author.mention} has prestiged successfully!",
-                view=None,
-                ephemeral=True
-            )
+            await perform_prestige(interaction)
             self.stop()
 
         @discord.ui.button(label="Nevermind.", style=discord.ButtonStyle.secondary)
@@ -2730,22 +2783,22 @@ async def prestige(ctx):
             if interaction.user != ctx.author:
                 return await interaction.response.send_message("This isn't your confirmation!", ephemeral=True)
 
-            await interaction.response.edit_message(content="Prestige canceled.", view=None, ephemeral=True)
+            await interaction.response.edit_message(content="Prestige canceled.", view=None)
             self.stop()
 
-    async def perform_prestige():
+    async def perform_prestige(interaction):
 
-        economy_table.upsert(
-            {"user_id": user_id, "wallet": 0, "bank": 0},
-            Query().user_id == user_id
-        )
+        set_user_balance(user_id, 100, 100)
 
         shop_roles = [v["role_name"] for v in shop_items.values()]
         removed_roles = []
         for role in ctx.author.roles:
             if role.name in shop_roles or role.name.startswith("Prestige "):
-                await ctx.author.remove_roles(role)
-                removed_roles.append(role.name)
+                try:
+                    await ctx.author.remove_roles(role)
+                    removed_roles.append(role.name)
+                except Exception:
+                    pass
 
         roman_level = to_roman(next_level)
         role_name = f"Prestige {roman_level}"
@@ -2760,10 +2813,13 @@ async def prestige(ctx):
         else:
             prestige_table.insert({"user_id": user_id, "level": next_level})
 
-        await ctx.send(
-            f"{ctx.author.mention} has prestiged to **{role_name}**!\n"
-            f"Cost: ${cost:,.0f}\n"
-            f"Removed roles: {', '.join(removed_roles) if removed_roles else 'None'}"
+        await interaction.response.edit_message(
+            content=(
+                f"{ctx.author.mention} has prestiged to **{role_name}**!\n"
+                f"Cost: ${cost:,.0f}\n"
+                f"Removed roles: {', '.join(removed_roles) if removed_roles else 'None'}"
+            ),
+            view=None
         )
 
     await ctx.send(
@@ -2780,7 +2836,7 @@ async def leaderboard(ctx):
 
     all_balances = balances_table.all()
     if not all_balances:
-        return await ctx.send("❌ No economy data found in balances table.")
+        return await ctx.send("No economy data found in balances table.")
 
     leaderboard = []
 
@@ -2838,5 +2894,25 @@ async def leaderboard(ctx):
     embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.display_avatar.url)
 
     await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def setbal(ctx, member: discord.Member, amount: int):
+    if amount <= 0:
+        return await ctx.send("Amount must be greater than zero.")
+
+    user_id = str(member.id)
+    balances_table = main_db.table("balances")
+    QueryObj = Query()
+
+    user_data = balances_table.get(QueryObj.user_id == user_id)
+
+    if user_data:
+        new_balance = user_data.get("wallet", 0) + amount
+        balances_table.update({"wallet": new_balance}, QueryObj.user_id == user_id)
+    else:
+        balances_table.insert({"user_id": user_id, "wallet": amount, "bank": 0})
+
+    await ctx.send(f"Added ${amount:,} to {member.mention}'s wallet.")
 
 bot.run(BOT1)

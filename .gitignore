@@ -12,3 +12,6 @@ kirabiter.code-workspace
 private.py
 wp.py
 priv.txt
+bingo_db.json
+event_config.json
+nameswapper.py

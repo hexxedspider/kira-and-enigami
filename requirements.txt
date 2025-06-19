@@ -1,0 +1,8 @@
+discord.py
+python-dotenv
+aiohttp
+beautifulsoup4
+asyncpraw
+tinydb
+python-dateutil
+pytz

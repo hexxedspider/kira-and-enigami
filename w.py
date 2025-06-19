@@ -17,16 +17,13 @@ class RestartHandler(FileSystemEventHandler):
 
     def start_bot(self, script):
         if script in self.processes:
-            print(f"Restarting {script}...")
             self.processes[script].terminate()
             self.processes[script].wait()
-        print(f"Starting {script}...")
         self.processes[script] = subprocess.Popen([sys.executable, script])
 
     def on_modified(self, event):
         for script in self.scripts:
             if event.src_path.endswith(script):
-                print(f"{event.src_path} changed, restarting...")
                 self.start_bot(script)
 
 if __name__ == "__main__":
@@ -36,7 +33,7 @@ if __name__ == "__main__":
     observer = Observer()
     observer.schedule(event_handler, path=path, recursive=False)
     observer.start()
-    print("Watching for file changes to bot1.py, bot2.py, and bot3.py...")
+    print("Thank you for choosing kira and enigami's experience.")
 
     try:
         while True:

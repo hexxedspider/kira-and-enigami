@@ -1,3 +1,7 @@
+# ANNOUCEMENTS
+
+I am currently working on a selfbot, however it has my token hard coded (since i didnt make it with github in mind) but i might clean it up and release that under its own repo.
+
 # KIRABITER (bot1)
 
 Kirabiter is a bot I made for simply wanting to make one, but it slowly grew and now I'm adding more and more to it. I've added several commands, see either in .help or code. .help hides a few commands, one of which being .adminpanel, however you could always peep the code to find out yourself.

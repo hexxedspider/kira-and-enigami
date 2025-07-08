@@ -123,6 +123,8 @@ async def stashex(interaction: discord.Interaction, folder: str):
         "shiku": "Here is an example of what Shiku looks like.",
         "yashima": "Here is an example of what Yashima looks like.",
         "vivi": "Here is an example of what Vivi looks like.",
+        "saeya": "Here is an example of what Saeya looks like.",
+        "muerte": "Here is an example of what Muerte looks like.",
     }
 
     files = get_stashex_files(folder_path)

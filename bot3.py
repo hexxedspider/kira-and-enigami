@@ -1,12 +1,8 @@
-import discord
+import discord, os, random, asyncio, threading
 from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
-import os
-import random
-import asyncio
 from datetime import datetime
-import threading
 
 load_dotenv()
 bot3 = os.getenv("bot3")
@@ -37,7 +33,7 @@ LOG_FILE = "command_log_3.txt"
 
 def log_command(interaction: discord.Interaction):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    username = f"{interaction.user.name}#{interaction.user.discriminator}"
+    username = f"{interaction.user.name}"
     command_used = getattr(interaction.command, "name", "unknown")
     guild_name = interaction.guild.name if interaction.guild else "DM"
     log_line = f"[enikami - enigami extended] [{timestamp}] [{guild_name}] {username}: {command_used}\n"

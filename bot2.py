@@ -1,27 +1,18 @@
-import discord
+import discord, os, random, aiohttp, asyncio, asyncpraw
 from discord.ext import commands
 from dotenv import load_dotenv
-import os
-import random
-import aiohttp
 from bs4 import BeautifulSoup
-import asyncpraw
-import xml.etree.ElementTree as ET
-import asyncio
 from datetime import datetime
+import xml.etree.ElementTree as ET
 
-# Load token from .env
 load_dotenv()
 BOT2 = os.getenv("BOT2")
 
-# Configure intents
 intents = discord.Intents.default()
-intents.message_content = True  # Needed to read message content
+intents.message_content = True 
 
-# Create bot instance
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
-# ---------- NSFW check decorator ----------
 def nsfw_check():
     async def predicate(ctx):
         if ctx.guild and not ctx.channel.is_nsfw():
@@ -33,12 +24,11 @@ def nsfw_check():
         return True
     return commands.check(predicate)
 
-# Path to your log file
 LOG_FILE = "command_log_2.txt"
 
 def log_command(ctx):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    username = f"{ctx.author.name}#{ctx.author.discriminator}"
+    username = f"{ctx.author.name}"
     command_used = ctx.message.content
     guild_name = ctx.guild.name if ctx.guild else "DM"
 
@@ -52,14 +42,12 @@ async def on_command(ctx):
 
 @bot.command()
 async def help(ctx):
-    # Delete invoking message if in a guild
     if ctx.guild:
         try:
             await ctx.message.delete()
         except discord.Forbidden:
             pass
 
-    # If in guild but channel not NSFW, send help in DMs
     if ctx.guild and not ctx.channel.is_nsfw():
         try:
             await ctx.author.send(
@@ -119,7 +107,6 @@ async def r34(ctx, *, tags: str):
             await send_post(ctx, post)
             return
 
-        # Fallback: try individual tags
         for tag in tags_list:
             url = f"https://rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit=50&tags={tag}"
             async with session.get(url) as resp:
@@ -150,7 +137,6 @@ async def send_post(ctx, post):
 
     await ctx.send(message)
 
-# ---------- Nekos.life command ----------
 async def fetch_nekos_image(session, endpoint):
     url = f"https://nekos.life/api/v2/img/{endpoint}"
     async with session.get(url) as resp:
@@ -185,7 +171,6 @@ async def nlife(ctx, category: str = None):
     embed.set_image(url=image_url_with_cb)
     await ctx.send(embed=embed)
 
-# ---------- Pornhub previews command ----------
 async def fetch_pornhub_previews(search_term):
     url = f"https://www.pornhub.com/video/search?search={search_term}"
     headers = {
@@ -235,7 +220,6 @@ async def ptn(ctx, *, search: str = None):
     except Exception as e:
         await ctx.send(f"Error fetching previews: {e}")
 
-# ---------- Waifu.pics NSFW command ----------
 @bot.command()
 @nsfw_check()
 async def wpic(ctx, category: str = None):
@@ -270,7 +254,6 @@ async def wpic(ctx, category: str = None):
 @bot.command()
 @nsfw_check()
 async def yandere(ctx, *, tags: str = None):
-    # Format tags for URL
     tag_string = "+".join(tags.split()) if tags else ""
     base_url = "https://yande.re/post.json"
     query = f"?limit=100&tags=rating:explicit+{tag_string}"
@@ -290,7 +273,6 @@ async def yandere(ctx, *, tags: str = None):
         await ctx.send("No results found for those tags.")
         return
 
-    # Pick a random image from the results
     post = random.choice(results)
     image_url = post.get("file_url")
     preview_url = post.get("preview_url")
@@ -317,7 +299,6 @@ async def gelbooru(ctx, *, tags: str = None):
     base_url = "https://gelbooru.com/index.php"
     limit = 100
 
-    # Compose tags query, add rating:explicit for NSFW
     query_tags = " ".join(tags.split()) if tags else ""
     full_tags = f"{query_tags} rating:explicit"
 
@@ -347,10 +328,8 @@ async def gelbooru(ctx, *, tags: str = None):
         await ctx.send("No results found for those tags.")
         return
 
-    # Pick random post
     post = random.choice(posts)
 
-    # Extract image url
     file_url = post.get("file_url") or post.get("sample_url") or post.get("preview_url")
     post_id = post.get("id")
     tags_str = post.get("tags", "")
@@ -359,11 +338,9 @@ async def gelbooru(ctx, *, tags: str = None):
         await ctx.send("No image URL found in the post.")
         return
 
-    # Check if the URL is a video type
     video_extensions = (".mp4", ".webm", ".gif")
 
     if file_url.endswith(video_extensions):
-        # Send the video link as a clickable message instead of embedding
         await ctx.send(f"Gelbooru video post: [Click here to view]({file_url})")
     else:
         embed = discord.Embed(
@@ -416,7 +393,6 @@ async def danbooru(ctx, *, tags: str = None):
     video_exts = (".mp4", ".webm", ".gif")
 
     if file_url.endswith(video_exts):
-        # Send direct link for video/gif files
         await ctx.send(f"Danbooru video post: [Click here to view]({file_url})")
     else:
         embed = discord.Embed(
@@ -445,12 +421,11 @@ async def invslavelink(ctx):
 
     await ctx.message.delete(delay=0.1)
 
-# Load Reddit credentials
 REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
 REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT")
 
-reddit = None  # global placeholder
+reddit = None 
 
 async def cycle_status():
     await bot.wait_until_ready()
@@ -484,7 +459,6 @@ async def on_ready():
 
 @bot.command()
 async def femboy(ctx):
-    # Only allow in DMs
     if ctx.guild is not None:
         try:
             await ctx.author.send("This command can only be used in DMs. Please message me directly.")
@@ -578,9 +552,8 @@ async def realbooru(ctx, *, tags: str = None):
     base_url = "https://realbooru.com/index.php"
     limit = 100
 
-    # Realbooru uses underscores, not spaces
     query_tags = "_".join(tags.split()) if tags else ""
-    full_tags = query_tags  # don't add "rating:explicit"
+    full_tags = query_tags
 
     params = {
         "page": "dapi",
@@ -691,7 +664,6 @@ async def tbib(ctx, *, tags: str = None):
     base_url = "https://tbib.org/index.php"
     limit = 100
 
-    # Format tags: "tag1 tag2" → "tag1+tag2"
     formatted_tags = "+".join(tags.split()) if tags else ""
     full_tags = f"{formatted_tags}+rating:explicit"
 
@@ -710,7 +682,7 @@ async def tbib(ctx, *, tags: str = None):
              await ctx.send("❌ Failed to fetch from TBIB.")
              return
     text = await resp.text()
-    print(text)  # <-- Debug: see raw response
+    print(text)
     try:
         data = await resp.json()
     except Exception as e:

@@ -531,6 +531,13 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
+def is_user_silenced(user_id):
+    curses = main_db.table("curses")
+    curse_data = curses.get(Query().user_id == str(user_id))
+    if curse_data and curse_data.get("type") == "silence" and time.time() - curse_data["timestamp"] < 1800:
+        return True
+    return False
+
 @bot.command()
 async def eightball(ctx, *, question: str):
     responses = [
@@ -1109,7 +1116,9 @@ async def reloadshop(ctx):
 async def shop(ctx):
     event = get_active_event()
     effects = event.get("effects", {})
-
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
+    user_id = str(ctx.author.id)
     override_tag = effects.get("shop_tag_override")
     embed = discord.Embed(title="Shop", color=discord.Color.gold())
     for item_name, data in shop_items.items():
@@ -1119,6 +1128,8 @@ async def shop(ctx):
 @bot.command()
 async def buy(ctx, *, item: str):
     user_id = str(ctx.author.id)
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
     item_lower = item.lower().strip()
     item_key = None
     for k, v in shop_items.items():
@@ -1165,7 +1176,7 @@ async def createshoproles(ctx):
 async def inventory(ctx, member: discord.Member = None):
     if member is None:
         member = ctx.author
-
+    
     owned_roles = []
     for item in shop_items.values():
         role = discord.utils.get(ctx.guild.roles, name=item["role_name"])
@@ -1183,6 +1194,9 @@ async def sell(ctx, *, item: str, rotting_effect: float = 0.0):
     user_id = str(ctx.author.id)
     item_lower = item.lower().strip()
     item_key = next((k for k, v in shop_items.items() if k.lower() == item_lower or v["role_name"].lower() == item_lower), None)
+
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
 
     if not item_key:
         return await ctx.send("That item doesn't exist in the shop.")
@@ -1299,6 +1313,9 @@ async def bailout(ctx, *, rotting_effect: float = 0.0):
     user_id = str(ctx.author.id)
     data = get_full_balance(user_id)
 
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
+
     if data["wallet"] > 0 or data["bank"] > 0:
         return await ctx.send("You still have money! Bailout is only for bankrupt users.")
 
@@ -1331,6 +1348,9 @@ async def kiratest(ctx):
 async def rob(ctx, target: discord.Member, *, rotting_effect: float = 0.0):
     thief_id = str(ctx.author.id)
     target_id = str(target.id)
+    user_id = str(ctx.author.id)
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
 
     if target.bot or target.id == ctx.author.id:
         return await ctx.send("Invalid target.")
@@ -1385,6 +1405,9 @@ def draw_card(deck):
 async def blackjack(ctx, bet: int):
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
+
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
 
     if bet <= 0:
         await ctx.send("Bet must be positive.")
@@ -1637,7 +1660,7 @@ async def cycle_status():
 
 @bot.command()
 async def kbsc(ctx):
-    await ctx.send("[directly download kirabiter source code (bot1.py, will be potentially broken for not having related json files).](https://raw.githubusercontent.com/hexxedspider/kira-and-enigami/refs/heads/master/bot1.py)")
+    await ctx.send("[directly download kirabiter source code (bot1.py, will be potentially broken for not having related json files, although it should generate on its own).](https://raw.githubusercontent.com/hexxedspider/kira-and-enigami/refs/heads/master/bot1.py)")
 
 heist_active = False
 heist_players = []
@@ -1693,6 +1716,9 @@ async def heist(ctx, *, rotting_effect: float = 0.0):
     event = get_active_event()
     heist_bonus = event.get("effects", {}).get("heist_bonus_chance", 0.0)
     heist_reward_boost = event.get("effects", {}).get("heist_reward_multiplier", 1.0)
+
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
 
     if bot.heist_active:
         await ctx.send("A heist is already in progress!")
@@ -1829,7 +1855,8 @@ async def joinheist(ctx):
     if len(bot.heist_players) >= 4:
         await ctx.send("The heist crew is full (4 max).")
         return
-
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
     user_id = ctx.author.id
     now = datetime.utcnow()
     expires_at = get_cooldown(user_id, 'heist')
@@ -1843,13 +1870,15 @@ async def joinheist(ctx):
 
 @bot.command()
 async def leaveheist(ctx):
+    user_id = str(ctx.author.id)
     if not bot.heist_active:
         await ctx.send("There's no active heist right now.")
         return
     if ctx.author not in bot.heist_players:
         await ctx.send("You're not currently in the heist crew.")
         return
-    
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
     bot.heist_players.remove(ctx.author)
     await ctx.send(f"{ctx.author.display_name} has left the heist crew.")
 
@@ -1899,6 +1928,9 @@ async def slots(ctx, bet: int, *, rotting_effect: float = 0.0):
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
 
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
+
     if bet <= 0:
         return await ctx.send("Bet must be positive.")
 
@@ -1933,47 +1965,6 @@ async def slots(ctx, bet: int, *, rotting_effect: float = 0.0):
 
     set_user_balance(user_id, data["wallet"], data["bank"])
     await ctx.reply(f"{' - '.join(result)}\n{outcome} New wallet: ${data['wallet']:,}")
-
-@bot.command()
-async def oldslots(ctx, bet: int):
-    user_id = str(ctx.author.id)
-    data = get_user_balance(user_id)
-    curses = main_db.table("curses")
-    curse_data = curses.get(Query().user_id == str(ctx.author.id))
-    if curse_data and time.time() - curse_data["timestamp"] < 1800:
-        if curse_data["type"] == "luck":
-            success_chance -= 0.2
-    elif curse_data["type"] == "silence":
-        return await ctx.send("You're silenced and can't use money commands right now.")
-    elif curse_data["type"] == "rotting":
-
-        if bet <= 0:
-            await ctx.send("You must bet a positive amount.")
-        return
-
-    if data["wallet"] < bet:
-        await ctx.send("You don't have enough money in your wallet to place that bet.")
-        return
-
-    symbols = ["🍒", "🍋", "🍊", "🍇", "💎"]
-    result = [random.choice(symbols) for _ in range(3)]
-    outcome = "You lost."
-    payout = 0
-
-    if result[0] == result[1] == result[2]:
-        payout = bet * 5
-        outcome = f"Jackpot! You won ${payout}!"
-    elif result[0] == result[1] or result[1] == result[2] or result[0] == result[2]:
-        payout = int(bet * 1.5)
-        outcome = f"You won ${payout}!"
-
-    if payout > 0:
-        data["wallet"] += payout
-    else:
-        data["wallet"] -= bet
-
-    set_user_balance(user_id, data["wallet"], data["bank"])
-    await ctx.reply(f"{' - '.join(result)}\n{outcome}\nYou now have ${data['wallet']:,} in your wallet.")
 
 @bot.command()
 async def roast(ctx):
@@ -2115,7 +2106,8 @@ async def daily(ctx, *, rotting_effect: float = 0.0):
     base = 100
     multiplier = get_active_event().get("effects", {}).get("daily_multiplier", 1.0)
     amount = int(base * multiplier * (1 - rotting_effect * 0.2))
-
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
     User = Query()
     user_data = main_db.get(User.id == user_id)
     if not user_data:
@@ -2138,6 +2130,8 @@ async def daily(ctx, *, rotting_effect: float = 0.0):
 
 @bot.command()
 async def invest(ctx, amount: int, multiplier: float = 1.0):
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
     curses = main_db.table("curses")
     curse_data = curses.get(Query().user_id == str(ctx.author.id))
     if curse_data and time.time() - curse_data["timestamp"] < 1800: 
@@ -2260,6 +2254,8 @@ async def helpme(ctx):
 @bot.command()
 async def deposit(ctx, amount: int):
     user_id = str(ctx.author.id)
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
     data = get_user_balance(user_id)
 
     if amount <= 0:
@@ -2277,6 +2273,8 @@ async def deposit(ctx, amount: int):
 
 @bot.command()
 async def withdraw(ctx, amount: int):
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
 
@@ -2769,7 +2767,7 @@ async def greetinglist(ctx):
         await ctx.message.delete()
 
 role_nicknames = {
-    "Prestige 1": ["p1", "500b spender", "prestiger", "earns more money (at first)", "PRESTIGER!", "​"]
+    "Prestige 1": ["500b spender", "prestiger", "earns more money (at first)", "PRESTIGER!", "​"]
 }
 # "𝔘͢𝖓𝖇ͦ𝖑𝖊𝖘𝖘", "⫷⛓𖤐⛓⫸", "†𝕾𝖕𝖎𝖙†", "⛧𝖒𝖎𝖑𝖐⛧", "✠✟✡☩", "ᴛʜᴇ ᴄʀᴏ𝕨", "𝖋𝖆𝖙𝖊𝖑𝖊𝖘𝖘", "𝖚𝖙𝖍𓂀"
 def to_roman(n):
@@ -2803,7 +2801,8 @@ async def change_nicknames():
 async def prestige(ctx):
     user_id = str(ctx.author.id)
     QueryObj = Query()
-
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
     prestige_table = main_db.table("prestige")
     economy_table = main_db.table("economy")
     user_data = get_user_balance(user_id)
@@ -2993,7 +2992,9 @@ async def gift(ctx, member: discord.Member, *, item_name: str):
     sender_id = str(ctx.author.id)
     receiver_id = str(member.id)
     item_name = item_name.strip().lower()
-
+    user_id = str(ctx.author.id)
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
     inventory_table = main_db.table("inventory")
 
     sender_items = inventory_table.get(Query().user_id == sender_id)
@@ -3053,7 +3054,8 @@ async def process_drain_curses():
 async def curse(ctx, member: discord.Member, variant: str):
     user_id = str(ctx.author.id)
     target_id = str(member.id)
-
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't curse anyone for this moment.")
     if member == ctx.author:
         return await ctx.send("You can't curse yourself. (But you might do it by accident.)")
     if member == bot.user:

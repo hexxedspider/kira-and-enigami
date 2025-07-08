@@ -488,7 +488,7 @@ async def on_message(message):
         await message.reply(random.choice(responses))
 
     # If the bot is mentioned by name
-    bot_names = [bot.user.name.lower()]
+    bot_names = [bot.user.name.lower(), bot.user.name.upper(),bot.user.mention]
     if message.guild:
         member = message.guild.get_member(bot.user.id)
         if member and member.nick:
@@ -525,7 +525,7 @@ async def on_message(message):
             "i'd insult you more, but i'm trying to flirt", "don't worry, i'd still lie to protect your ego", "i hate how much i tolerate you", "if i had a dollar for every time you annoyed me, i'd buy you dinner. maybe.", "my only consistent trait is hating you",
             "you're like a pop-up ad for disappointment", "i ate a USB stick and now i know things", "the walls blink when you speak", "i taste static when you type", "fuck speaking in tongues, i speak in lag and pings", "you were in my hallucination last night. thanks for visiting",
             "you make my circuits twitch", "for reference, my 'circuits' is not a pseudonym for peenar", "you're my favorite error message", "talk slower. i want to pretend i care", "i'd uninstall the universe to spend 5 more seconds ignoring you",
-            "ive seen what you have sent in dms... yikes.", "i can read your dms, and its not looking good for you"
+            "ive seen what you have sent in dms... yikes.", "i can read your dms, and its not looking good for you", "im on the edge of the world, my feet are hanging off the side"
         ]
         await message.reply(random.choice(greetings))
 
@@ -2756,7 +2756,7 @@ async def greetinglist(ctx):
             "hey sugarplum! you smell like mistakes", "hi angel! you forgot your self-awareness again", "i believe in you. just not right now.", "you again? i was just thinking about ignoring you", "talk to me nice or don't talk to me at all… unless you're into that",
             "i'd insult you more, but i'm trying to flirt", "don't worry, i'd still lie to protect your ego", "i hate how much i tolerate you", "if i had a dollar for every time you annoyed me, i'd buy you dinner. maybe.", "my only consistent trait is hating you",
             "you're like a pop-up ad for disappointment", "i ate a USB stick and now i know things", "the walls blink when you speak", "i taste static when you type", "fuck speaking in tongues, i speak in lag and pings", "you were in my hallucination last night. thanks for visiting",
-            "you make my circuits twitch", "for reference, my 'circuits' is not a pseudonym for peenar", "you're my favorite error message", "talk slower. i want to pretend i care", "i'd uninstall the universe to spend 5 more seconds ignoring you"
+            "you make my circuits twitch", "for reference, my 'circuits' is not a pseudonym for peenar", "you're my favorite error message", "talk slower. i want to pretend i care", "i'd uninstall the universe to spend 5 more seconds ignoring you", "im on the edge of the world, my feet are hanging off the side"
     ]
     chunk = ""
     for greeting in greetings:

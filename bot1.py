@@ -166,7 +166,9 @@ bingo_active = False
 # In-memory cooldown tracker, change to db.json later or something
 heist_cooldowns = {}  # {user_id: datetime}
 
-#load shop items cause it didnt before
+WELCOME_FILE = "wconfig.json"
+
+#load shop items cause it didnt before, can use .reloadshop too
 SHOP_FILE = "shop_items.json"
 
 try:
@@ -205,6 +207,10 @@ async def assign_bankrupt_role(ctx, user_id):
             await ctx.send(f"{member.mention} has gone bankrupt and earned the **{role_name}** role.")
         except discord.Forbidden:
             await ctx.send("I can't assign roles. Please check my permissions.")
+
+@bot.command()
+async def invlink(ctx):
+    await ctx.author.send(f"[Link here.](https://discord.com/oauth2/authorize?client_id=1051357875521458246&permissions=8&integration_type=0&scope=bot)")
 
 @bot.command()
 async def invenilink(ctx):
@@ -392,6 +398,7 @@ async def help(ctx):
     embed12.add_field(name=".divorce", value="Divorce your spouse.", inline=True)
     embed12.add_field(name=".marriages", value="View all marriages.", inline=True)
     embed12.add_field(name=".propose <@person>", value="Propose marriage to someone.", inline=True)
+    embed12.add_field(name="--TO BE ADDED--", value=" There are a couple more commands I have to add to this.", inline=True)
     
     view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6, embed7, embed8, embed9, embed10, embed11, embed12])
     await ctx.send(embed=embed1, view=view)
@@ -870,12 +877,9 @@ async def unmute(ctx, member: discord.Member):
 @bot.command()
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx, amount: int = 5):
-    await ctx.channel.purge(limit=amount)
-    await ctx.send(f"Cleared {amount} messages.", delete_after=3)
-
     try:
-        deleted = await ctx.channel.purge(limit=amount + 1)  # +1 to delete the command message too
-        await ctx.send(f"Deleted {len(deleted)-1} messages.", delete_after=5)
+        deleted = await ctx.channel.purge(limit=amount + 1)  # +1 to include the command message
+        await ctx.send(f"Deleted {len(deleted) - 1} messages.", delete_after=5)
     except Exception as e:
         await ctx.send(f"Failed to delete messages. Error: {e}")
 
@@ -1114,11 +1118,11 @@ async def reloadshop(ctx):
 
 @bot.command()
 async def shop(ctx):
+    user_id = str(ctx.author.id)  # <-- define user_id first!
     event = get_active_event()
     effects = event.get("effects", {})
     if is_user_silenced(user_id):
         return await ctx.send("You're silenced and can't use money commands right now.")
-    user_id = str(ctx.author.id)
     override_tag = effects.get("shop_tag_override")
     embed = discord.Embed(title="Shop", color=discord.Color.gold())
     for item_name, data in shop_items.items():
@@ -1628,8 +1632,7 @@ async def cycle_status():
     statuses = [
         discord.Activity(type=discord.ActivityType.listening, name="music probably"),
         discord.CustomActivity(name="DONT SAY KIRABITER IM GETTING TIRED OF IT"),
-        discord.CustomActivity(name="did you know i have ties to two other bots?"),
-        discord.CustomActivity(name="warning you, my sister bot is a little unhinged..."),
+        discord.CustomActivity(name="i have ties to two other bots and both of them suck. pun intended."),
         discord.CustomActivity(name="im available for download, .github"),
         discord.CustomActivity(name=".help if you need me."),
         discord.CustomActivity(name="i fuckin gambled everything and lost"),
@@ -1683,14 +1686,10 @@ def get_cooldown(user_id: int, command: str):
     return expires_at
 
 heist_role_effects = {
-    "VIP": {"bonus_reward_multiplier": 0.020},
-    "Elite": {"bonus_reward_multiplier": 0.025},
-    "God": {"bonus_reward_multiplier": 0.05},
-    "Immortal": {"bonus_chance": 0.1},
-    "True One": {"bonus_reward_multiplier": 0.075},
     "Gambler": {"bonus_reward_multiplier": 0.1},
     "Masked": {"bonus_chance": 0.05},
     "Extended Mag": {"bonus_chance":0.02},
+    "Proxy": {"bonus_chance": 0.03}
 }
 
 def get_user_heist_bonuses(member):
@@ -1846,6 +1845,7 @@ async def heist(ctx, *, rotting_effect: float = 0.0):
 
 @bot.command()
 async def joinheist(ctx):
+    user_id = ctx.author.id
     if not bot.heist_active:
         await ctx.send("There's no active heist to join.")
         return
@@ -1857,7 +1857,6 @@ async def joinheist(ctx):
         return
     if is_user_silenced(user_id):
         return await ctx.send("You're silenced and can't use money commands right now.")
-    user_id = ctx.author.id
     now = datetime.utcnow()
     expires_at = get_cooldown(user_id, 'heist')
     if expires_at and now < expires_at:
@@ -2130,15 +2129,12 @@ async def daily(ctx, *, rotting_effect: float = 0.0):
 
 @bot.command()
 async def invest(ctx, amount: int, multiplier: float = 1.0):
-    if is_user_silenced(user_id):
-        return await ctx.send("You're silenced and can't use money commands right now.")
     curses = main_db.table("curses")
     curse_data = curses.get(Query().user_id == str(ctx.author.id))
-    if curse_data and time.time() - curse_data["timestamp"] < 1800: 
-        if curse_data["type"] == "silence":
-            return await ctx.send("You're silenced and can't use money commands right now.")
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
+    if is_user_silenced(user_id):
+        return await ctx.send("You're silenced and can't use money commands right now.")
 
     if amount <= 0:
         await ctx.send("Investment amount must be positive.")
@@ -2273,9 +2269,9 @@ async def deposit(ctx, amount: int):
 
 @bot.command()
 async def withdraw(ctx, amount: int):
+    user_id = str(ctx.author.id)
     if is_user_silenced(user_id):
         return await ctx.send("You're silenced and can't use money commands right now.")
-    user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
 
     if amount <= 0:
@@ -2434,15 +2430,15 @@ async def marriages(ctx):
         return await ctx.send("No one is married yet.")
 
     embed = discord.Embed(
-        title="Server Marriages",
+        title="Global Marriages",
         color=discord.Color.pink()
     )
 
     for entry in marriages:
         user1 = ctx.guild.get_member(int(entry['user_id']))
         user2 = ctx.guild.get_member(int(entry['spouse_id']))
-        name1 = user1.display_name if user1 else f"<@{entry['user_id']}>"
-        name2 = user2.display_name if user2 else f"<@{entry['spouse_id']}>"
+        name1 = user1.display_name if user1 else f"<different server>"
+        name2 = user2.display_name if user2 else f"<different>"
         embed.add_field(name=f"{name1} 💞 {name2}", value="\u200b", inline=False)
 
     await ctx.send(embed=embed)
@@ -2962,7 +2958,7 @@ async def leaderboard(ctx):
             inline=False
         )
 
-    embed.set_author(name="Server Leaderboard", icon_url=ctx.guild.icon.url if ctx.guild and ctx.guild.icon else None)
+    embed.set_author(name="Global Leaderboard", icon_url=ctx.guild.icon.url if ctx.guild and ctx.guild.icon else None)
     embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.display_avatar.url)
 
     await ctx.send(embed=embed)
@@ -3160,5 +3156,132 @@ async def hex(ctx, member: discord.Member = None):
 @bot.command()
 async def cursehelp(ctx):
     await ctx.send(f"### LUCK\nThis will reduce the affected person's luck by 20%\n-# This will cost you 10% of your current amount, including anything stashed in the bank, and if it fails, it'll be reflected back to you as well.\n\n### DRAIN\n This will reduce someone's wallet and bank account by 2% every minute.\n-# This will cost you 30% of your money, and again, if it fails, it'll be reflected back onto you.\n\n### SILENCE\n This will prevent the affected person from using money commands, essentially stopping them from making money.\n-# This will cost you 15%. You can take a guess and assume, if it fails, it'll be reflected back onto you.\n\n### ROTTING\nThis will make the affected user slowly rot, making their luck and reward multiplier slowly dwindle as the time passes, finally stopped at 30 minutes, like the rest of them.\n\n0 min = 0%\n5 min = -3.3%\n15 min = -10%\n...\n30 min = -20%\n-# Again, if it fails, it'll apply to you.\n-# side note, this is probably my favorite out of all the curses.")
+
+REACTION_ROLE_FILE = "reaction_roles.json"
+
+def load_reaction_roles():
+    try:
+        with open(REACTION_ROLE_FILE, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def save_reaction_roles(data):
+    with open(REACTION_ROLE_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+# Load on startup
+bot.reaction_role_messages = load_reaction_roles()
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def verify(ctx, channel: discord.TextChannel, *, message: str):
+    embed = discord.Embed(
+        title="Verify",
+        description=message,
+        color=discord.Color.blue()
+    )
+    embed.set_footer(text="React to get verified!")
+    msg = await channel.send(embed=embed)
+    emoji = "💝"  # purely for looks
+    await msg.add_reaction(emoji)
+    # Add (not overwrite) the message ID and role name
+    bot.reaction_role_messages[str(msg.id)] = "[MEMBER]"
+    save_reaction_roles(bot.reaction_role_messages)
+    await ctx.send(f"Embed sent to {channel.mention} with reaction role.")
+
+@bot.event
+async def on_raw_reaction_add(payload):
+    msg_id = str(payload.message_id)
+    if msg_id in bot.reaction_role_messages:
+        guild = bot.get_guild(payload.guild_id)
+        if not guild:
+            return
+        member = guild.get_member(payload.user_id)
+        if not member:
+            member = await guild.fetch_member(payload.user_id)
+        role_name = bot.reaction_role_messages[msg_id]
+        role = discord.utils.get(guild.roles, name=role_name)
+        if role and role not in member.roles:
+            await member.add_roles(role)
+
+@bot.event
+async def on_raw_reaction_remove(payload):
+    msg_id = str(payload.message_id)
+    if msg_id in bot.reaction_role_messages:
+        guild = bot.get_guild(payload.guild_id)
+        if not guild:
+            return
+        member = guild.get_member(payload.user_id)
+        if not member:
+            member = await guild.fetch_member(payload.user_id)
+        role_name = bot.reaction_role_messages[msg_id]
+        role = discord.utils.get(guild.roles, name=role_name)
+        if role and role in member.roles:
+            await member.remove_roles(role)
+
+def load_welcome_config():
+    try:
+        with open(WELCOME_FILE, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+def save_welcome_config(config):
+    with open(WELCOME_FILE, "w") as f:
+        json.dump(config, f, indent=4)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def setwelcome(ctx, *, message: str):
+    """Set the welcome message. Use {user} for the new member and {server} for the server name."""
+    config = load_welcome_config()
+    config["welcome"] = message
+    save_welcome_config(config)
+    await ctx.send("Welcome message set!")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def setgoodbye(ctx, *, message: str):
+    """Set the goodbye message. Use {user} for the member and {server} for the server name."""
+    config = load_welcome_config()
+    config["goodbye"] = message
+    save_welcome_config(config)
+    await ctx.send("Goodbye message set!")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def setwgchannel(ctx, channel: discord.TextChannel):
+    """Set the channel for welcome/goodbye messages."""
+    config = load_welcome_config()
+    config["channel_id"] = channel.id
+    save_welcome_config(config)
+    await ctx.send(f"Welcome/goodbye channel set to {channel.mention}!")
+
+@bot.event
+async def on_member_join(member):
+    config = load_welcome_config()
+    message = config.get("welcome")
+    channel_id = config.get("channel_id")
+    channel = None
+    if channel_id:
+        channel = member.guild.get_channel(channel_id)
+    if not channel:
+        channel = member.guild.system_channel or next((c for c in member.guild.text_channels if c.permissions_for(member.guild.me).send_messages), None)
+    if message and channel:
+        await channel.send(message.format(user=member.mention, server=member.guild.name))
+
+@bot.event
+async def on_member_remove(member):
+    config = load_welcome_config()
+    message = config.get("goodbye")
+    channel_id = config.get("channel_id")
+    channel = None
+    if channel_id:
+        channel = member.guild.get_channel(channel_id)
+    if not channel:
+        channel = member.guild.system_channel or next((c for c in member.guild.text_channels if c.permissions_for(member.guild.me).send_messages), None)
+    if message and channel:
+        await channel.send(message.format(user=member.mention, server=member.guild.name))
 
 bot.run(BOT1)

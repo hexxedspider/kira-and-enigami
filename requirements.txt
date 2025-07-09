@@ -6,3 +6,4 @@ asyncpraw
 tinydb
 python-dateutil
 pytz
+watchdog

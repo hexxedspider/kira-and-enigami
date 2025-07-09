@@ -14,5 +14,5 @@
 "Anomaly": {"price": 1000000000, "role_name": "Anomaly", "sellable": true},
 "Certified": {"price": 5000000000, "role_name": "Certified Loser", "sellable": false},
 "Ivory": {"price": 10000000000, "role_name": "Ivory Warden", "sellable": false},
-"Undescribable": {"price": 500000000000000000, "role_name": "Undescribable", "sellable": false}
+"Undescribable": {"price": 500000000000, "role_name": "Undescribable", "sellable": false}
 }

@@ -1,6 +1,8 @@
 # ANNOUCEMENTS
 
-I am currently working on a selfbot, however it has my token hard coded (since i didnt make it with github in mind) but i might clean it up and release that under its own repo.
+I am currently working on a selfbot, it is currently functional, also with 50+ commands, however until im *really* happy with it, its staying private. i also plan on making a exe with a gui for it, so you dont have to launch them from the command line, but that option will also obviously be available.
+
+additionally, since im starting to mess with actual guis and what not, im planning on making a (hopefully pretty) gif/video shrinker, which already exists in my files, its just not uploaded and doesnt look pretty at all. also gets flagged on [Virustotal](https://www.virustotal.com/gui/file/02d1e5eff743408df5c0f54a474412be8b8de3f01e7363384027fc595874631e) even though there's nothing malicious.
 
 # KIRABITER (bot1)
 

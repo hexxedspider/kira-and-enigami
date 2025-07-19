@@ -14,13 +14,13 @@ Uses a period (.) for commands.
 
 enigami is a bot I made, which I jokingly used [r34](rule34.xxx) API as a test, but it ended up as a wanted command, so I made this as a NSFW bot, instead of having it in the main bot. smh.
 
-Uses a exclamation point (!) for commands.
+Uses a slash (/) for commands.
 
 ## enikami - enigami extended (bot3)
 
 enikami is another NSFW bot, but for different commands this time.
 
-Uses a dollar sign ($) for commands.
+Uses a slash (/) for commands.
 
 # _MISC_
 

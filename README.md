@@ -38,7 +38,7 @@ These bots were made with ***my*** servers / me in general in mind, not public u
 
 # _CONNECTIONS_
 
-@yungpharaoh (discord)
+@yungpharaoh, @hexxedspider (discord)
 
 @hexxedspider, @enigami-and-bite (github, duh)
 

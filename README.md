@@ -20,6 +20,10 @@ enikami is another NSFW bot, but for different commands this time.
 
 Uses a dollar sign ($) for commands.
 
+## Satin (satin)
+
+Satin a new type of bot that plays from [BadRadio](badradio.nz) in a voice channel of your choosing. Go support BadRadio and their efforts, as it's easily one of the best things I've ever stumbled across.
+
 # _MISC_
 
 Each command prefix can be configured the bot1.py file.

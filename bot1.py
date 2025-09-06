@@ -75,6 +75,7 @@ import threading
 import pytz
 import ast
 from functools import wraps
+import yt_dlp
 
 #db.json stores shit
 main_db = TinyDB("db.json")
@@ -140,7 +141,17 @@ bot.heist_active = False
 bot.heist_players = []
 heist_cooldowns = {}
 
-
+def parse_bet_amount(bet_input, wallet):
+    bet_input = str(bet_input).lower().strip()
+    if bet_input == "all":
+        return wallet
+    elif bet_input.endswith("p") and bet_input[:-1].isdigit():
+        percent = int(bet_input[:-1])
+        if percent in (25, 50, 75):
+            return max(1, int(wallet * (percent / 100)))
+    elif bet_input.isdigit():
+        return int(bet_input)
+    return None
 
 # Path to your log file
 LOG_FILE = "command_log_1.txt"
@@ -221,6 +232,15 @@ async def invenilink(ctx):
         await error.delete(delay=5)
 
     await ctx.message.delete(delay=0.1)
+
+def get_prestige_bonuses(user_id):
+    prestige_entry = prestige_table.get(Query().user_id == user_id)
+    level = prestige_entry["level"] if prestige_entry else 0
+    # Example: Each prestige gives +10% multiplier and +$1,000,000 cap
+    multiplier = 1.0 + (level * 0.1)
+    wallet_cap = 50_000_000_000_000 + (level * 250_000_000_000_000)
+    bank_cap = 50_000_000_000_000 + (level * 250_000_000_000_000)
+    return multiplier, wallet_cap, bank_cap
 
 class HelpView(discord.ui.View):
     def __init__(self, embeds):
@@ -331,7 +351,7 @@ async def help(ctx):
     color=discord.Color.blurple()
 )
     embed7.set_footer(text=f"This menu disables in 60 seconds.")
-    embed7.add_field(name=".report", value="Sends a message to a specified channel.")
+    embed7.add_field(name=".report", value="Sends a message to a specified channel in the official test server.")
     embed7.add_field(name=".cleardm <amount>", value="Clears bot's messages, but this time in DMs. Defaults to 5.", inline=True)
     embed7.add_field(name=".kiratest", value="Sends an invite to the kirabiter test server.")
     embed7.add_field(name=".deposit <amount>", value="Put money into your bank to protect your money from being robbed.")
@@ -390,6 +410,8 @@ async def help(ctx):
     embed11.add_field(name=".curse <@person> <curse_name>", value="Place a curse on someone.", inline=True),
     embed11.add_field(name=".cursehelp", value="Provides info based off the curse you provide. Don't know one? It'll tell you upon use.", inline=True)
     
+    embed11.set_footer(text=f"This menu disables in 60 seconds.")
+
     embed12 = discord.Embed(
         title="Help Page 12",
         description="Fun & Info Commands",
@@ -398,9 +420,34 @@ async def help(ctx):
     embed12.add_field(name=".divorce", value="Divorce your spouse.", inline=True)
     embed12.add_field(name=".marriages", value="View all marriages.", inline=True)
     embed12.add_field(name=".propose <@person>", value="Propose marriage to someone.", inline=True)
-    embed12.add_field(name="--TO BE ADDED--", value=" There are a couple more commands I have to add to this.", inline=True)
-    
-    view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6, embed7, embed8, embed9, embed10, embed11, embed12])
+    embed12.add_field(name=".marriageinfo <@person>", value="View info about a marriage.", inline=True)
+    embed12.add_field(name=".vowedit <vow>", value="Edit your marriage vow.", inline=True)
+    embed12.add_field(name=".viewvow <@person>", value="View your marriage vow, or mention someone to see theirs.", inline=True)
+
+    embed12.set_footer(text=f"This menu disables in 60 seconds.")
+
+    embed13 = discord.Embed(
+        title="Help Page 13",
+        description="Fun & Info Commands",
+        color=discord.Color.blurple()
+)
+    embed13.add_field(name=".vowremove", value="Remove your marriage vow.", inline=True)
+    embed13.add_field(name=".jumpscare", value="Sends a 3x3 spoiler block of images, one of them is a j*b application, the other 8 are white squares.\n-# This shit is so stupid bro.", inline=True)
+    embed13.add_field(name=".about", value="Sends information about the bot, and also me, the owner/creator.", inline=True)
+    embed13.add_field(name=".greetinglist", value="Sends all the current messages that I will reply with (when messaging 'kirabiter'). *DMs* you.", inline=True)
+    embed13.add_field(name=".prestige", value="Lets you prestige, which .prestigeinfo will tell you about. Does ***not*** prestige immediately, it will prompt you if you're absolutely sure.", inline=True)
+    embed13.add_field(name=".leaderboard", value="Shows the the top 3 people that have the most money, *globally*, not server only.")
+
+    embed14 = discord.Embed(
+        title="Help Page 14",
+        description="Fun & Info Commands",
+        color=discord.Color.blurple()
+    )
+    embed14.add_field(name=".hex", value="Shows your current curse, and what it does.", inline=True)
+    embed14.add_field(name=".gift <@person> <@role>", value="Lets you send a role to another user.", inline=True)
+    embed14.add_field(name=".curseinfo", value="View information about all current curses.", inline=True)
+    embed14.add_field(name=".dlmedia <url>", value="Download media from a URL.", inline=True)
+    view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6, embed7, embed8, embed9, embed10, embed11, embed12, embed13, embed14])
     await ctx.send(embed=embed1, view=view)
 
 @bot.command()
@@ -828,10 +875,11 @@ async def unban(ctx, *, member_name):
 
     for ban_entry in banned_users:
         user = ban_entry.user
-        if user.name.lower() == member_name or f"{user.name.lower()}#{user.discriminator}" == member_name:
+        # Match by username only (case-insensitive)
+        if user.name.lower() == member_name:
             try:
                 await ctx.guild.unban(user)
-                await ctx.send(f"Unbanned {user.name}#{user.discriminator}")
+                await ctx.send(f"Unbanned {user.name}")
                 return
             except Exception as e:
                 await ctx.send(f"Could not unban {user.name}. Error: {e}")
@@ -939,10 +987,10 @@ async def balance(ctx):
     f"• Reward Multiplier: x{reward_multiplier:.2f}\n"
     f"• Roles: {', '.join(roles) if roles else 'None'}"
 )
-    
+
 @bot.command()
 @apply_rotting_curse
-async def gamble(ctx, bet: int, *, rotting_effect: float = 0.0):
+async def gamble(ctx, bet: str, *, rotting_effect: float = 0.0):
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
     curses = main_db.table("curses")
@@ -952,23 +1000,22 @@ async def gamble(ctx, bet: int, *, rotting_effect: float = 0.0):
         if curse_data.get("type") == "silence":
             return await ctx.send("You're silenced and can't use money commands right now.")
 
-    if bet <= 0:
-        await ctx.send("Bet must be a positive amount.")
-        return
+    bet_amount = parse_bet_amount(bet, data["wallet"])
+    if bet_amount is None or bet_amount <= 0:
+        return await ctx.send("Invalid bet amount. Use a number, 'all', '25p', '50p', or '75p'.")
+    if data["wallet"] < bet_amount:
+        return await ctx.send("You don't have enough money in your wallet.")
 
-    if data["wallet"] < bet:
-        await ctx.send("You don't have enough money in your wallet.")
-        return
-
-    multiplier = 1 - (rotting_effect * 0.2)
+    prestige_multiplier, wallet_cap, bank_cap = get_prestige_bonuses(user_id)
+    multiplier = (1 - (rotting_effect * 0.2)) * prestige_multiplier
 
     if random.choice([True, False]):
-        winnings = int(bet * multiplier)
+        winnings = int(bet_amount * multiplier)  # Multiplier applies to winnings
         data["wallet"] += winnings
+        data["wallet"] = min(data["wallet"], wallet_cap)
         result = f"You won! Your new wallet balance is ${data['wallet']:,}."
     else:
-        loss = int(bet * multiplier)
-        data["wallet"] -= loss
+        data["wallet"] -= bet_amount  # No multiplier on losses
         result = f"You lost! Your new wallet balance is ${data['wallet']:,}."
 
     set_user_balance(user_id, data["wallet"], data["bank"])
@@ -1151,6 +1198,8 @@ async def buy(ctx, *, item: str):
         return
 
     data["wallet"] -= price
+    prestige_multiplier, wallet_cap, bank_cap = get_prestige_bonuses(user_id)
+    data["wallet"] = min(data["wallet"], wallet_cap)  # Cap wallet after purchase
     set_user_balance(user_id, data["wallet"], data["bank"])
 
     role_name = shop_items[item_key]["role_name"]
@@ -1271,25 +1320,13 @@ async def cfstats(ctx, member: discord.Member = None):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def adminpanel(ctx):
-    """Sends admin commands only if used in the admin channel."""
-    admin_channel_id = 1380720256456200202 # i cant be damned to make this part into a .env file so ill just change it later, and if i dont, all well sue me
-
-    if ctx.channel.id != admin_channel_id:
-        await ctx.send(f"Please use this command in <#{admin_channel_id}>.")
+    """Sends admin commands only if used in an admin-only channel."""
+    perms = ctx.channel.permissions_for(ctx.author)
+    if not perms.administrator:
+        await ctx.send("You must be an administrator to use this command in this channel.")
         return
 
-    admin_commands = """
-    **Admin Commands:**
-    - `.kick @user [reason]` - Kick a user from the server.
-    - `.ban @user [reason]` - Ban a user from the server.
-    - `.unban username#1234` - Unban a user by their name and discriminator.
-    - `.mute @user [reason]` - Mute a user by adding the Muted role.
-    - `.unmute @user` - Remove the Muted role from a user.
-    - `.clear <number>` - Bulk delete messages in the current channel.
-    - `.giverole @user role_name` - Give a role to a user.
-    - `.setbal @user [amount]` - Give money to a user, only used for testing purposes. Only works in servers, NOT DMs.
-    - `.clear [amount]` - Clears bot's messages. Defaults to 5.
-    """
+    admin_commands = "**Admin Commands:**\n- `.kick @user [reason]` - Kick a user from the server.\n- `.ban @user [reason]` - Ban a user from the server.\n- `.unban username` - Unban a user by their name and discriminator.\n- `.mute @user [reason]` - Mute a user by adding the Muted role.\n- `.unmute @user` - Remove the Muted role from a user.\n- `.clear <number>` - Bulk delete messages in the current channel.\n- `.giverole @user role_name` - Give a role to a user.\n- `.setbal @user [amount]` - Give money to a user, only used for testing purposes. Only works in servers, NOT DMs.\n- `.clear [amount]` - Clears bot's messages. Defaults to 5.\n- `.setwelcome / .setgoodbye [message]` - Sets the welcome or goodbye message for new members. Use {user} to have the user be named, {server} for the server name.\n- `.reloadshop` - Reloads the shop items from the JSON file.\n- `.createshoproles` - Creates all shop roles if they don't exist.\n- `.verify <#channel> <message>` - Sends a embed message to the specified channel. '[MEMBER]' role needed, exactly that format and capitalization, with the brackets and all.\n- `.setwgchannel <#channel>` - Sets what channel the welcome and goodbye messages should be sent to."
 
     await ctx.send(admin_commands)
     await ctx.message.delete()
@@ -1344,7 +1381,7 @@ async def bailout(ctx, *, rotting_effect: float = 0.0):
 @bot.command()
 async def kiratest(ctx):
     """sends the bot's test server"""
-    await ctx.send("Kirabiter is being constantly tested, which extends to enigami, and enikami. If you want to join the test server, [click here or the invite underneath.](https://discord.gg/aCWhx4TK)")
+    await ctx.send("Kirabiter is being constantly tested, which extends to enigami, and enikami. If you want to join the test server, [click here or the invite underneath.](https://discord.gg/vUtUENQqTD)")
 
 @bot.command()
 @apply_rotting_curse
@@ -1406,19 +1443,18 @@ def draw_card(deck):
     return deck.pop(random.randint(0, len(deck) - 1))
 
 @bot.command()
-async def blackjack(ctx, bet: int):
+async def blackjack(ctx, bet: str):
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
 
     if is_user_silenced(user_id):
         return await ctx.send("You're silenced and can't use money commands right now.")
 
-    if bet <= 0:
-        await ctx.send("Bet must be positive.")
-        return
-    if data["wallet"] < bet:
-        await ctx.send("You don't have enough in your wallet to bet that amount.")
-        return
+    bet_amount = parse_bet_amount(bet, data["wallet"])
+    if bet_amount is None or bet_amount <= 0:
+        return await ctx.send("Invalid bet amount. Use a number, 'all', '25p', '50p', or '75p'.")
+    if data["wallet"] < bet_amount:
+        return await ctx.send("You don't have enough in your wallet to bet that amount.")
 
     data["wallet"] -= bet
     set_user_balance(user_id, data["wallet"], data.get("bank", 0))
@@ -1923,17 +1959,16 @@ async def heistcrew(ctx):
 
 @bot.command()
 @apply_rotting_curse
-async def slots(ctx, bet: int, *, rotting_effect: float = 0.0):
+async def slots(ctx, bet: str, *, rotting_effect: float = 0.0):
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
-
     if is_user_silenced(user_id):
         return await ctx.send("You're silenced and can't use money commands right now.")
 
-    if bet <= 0:
-        return await ctx.send("Bet must be positive.")
-
-    if data["wallet"] < bet:
+    bet_amount = parse_bet_amount(bet, data["wallet"])
+    if bet_amount is None or bet_amount <= 0:
+        return await ctx.send("Invalid bet amount. Use a number, 'all', '25p', '50p', or '75p'.")
+    if data["wallet"] < bet_amount:
         return await ctx.send("Insufficient wallet balance.")
 
     symbols = ["🍒", "🍋", "🍊", "🍇", "💎"]
@@ -1943,23 +1978,25 @@ async def slots(ctx, bet: int, *, rotting_effect: float = 0.0):
 
     payout = 0
     if occurrences == [5]:
-        payout = int(bet * 8)
+        payout = bet_amount * 8
     elif occurrences == [4, 1]:
-        payout = int(bet * 5)
+        payout = bet_amount * 5
     elif occurrences == [3, 2]:
-        payout = int(bet * 4)
+        payout = bet_amount * 4
     elif 3 in occurrences:
-        payout = int(bet * 3)
+        payout = bet_amount * 3
     elif occurrences == [2, 2, 1]:
-        payout = int(bet * 1.5)
+        payout = int(bet_amount * 1.5)
 
-    payout = int(payout * (1 - rotting_effect * 0.2))
+    prestige_multiplier, wallet_cap, bank_cap = get_prestige_bonuses(user_id)
+    payout = int(payout * (1 - (rotting_effect * 0.2)) * prestige_multiplier)
 
     if payout > 0:
-        data["wallet"] += payout
+        data["wallet"] += payout  # Multiplier applies to winnings
+        data["wallet"] = min(data["wallet"], wallet_cap)
         outcome = f"You won ${payout:,}!"
     else:
-        data["wallet"] -= bet
+        data["wallet"] -= bet_amount  # No multiplier on losses
         outcome = "You lost."
 
     set_user_balance(user_id, data["wallet"], data["bank"])
@@ -2129,8 +2166,6 @@ async def daily(ctx, *, rotting_effect: float = 0.0):
 
 @bot.command()
 async def invest(ctx, amount: int, multiplier: float = 1.0):
-    curses = main_db.table("curses")
-    curse_data = curses.get(Query().user_id == str(ctx.author.id))
     user_id = str(ctx.author.id)
     data = get_user_balance(user_id)
     if is_user_silenced(user_id):
@@ -2152,12 +2187,27 @@ async def invest(ctx, amount: int, multiplier: float = 1.0):
         await ctx.send("You don't have enough money in your wallet to invest that amount.")
         return
 
+    prestige_multiplier, wallet_cap, bank_cap = get_prestige_bonuses(user_id)
+    # Calculate max multiplier that won't hit the cap
+    max_possible_multiplier = (wallet_cap - (data["wallet"] - amount)) / amount
+    max_possible_multiplier = max(max_possible_multiplier, 1.1)  # Ensure at least 1.1
+
+    if amount * multiplier + (data["wallet"] - amount) > wallet_cap:
+        # Drop multiplier to max possible
+        old_multiplier = multiplier
+        multiplier = min(multiplier, max_possible_multiplier)
+        if multiplier < old_multiplier:
+            await ctx.send(
+                f"Your requested multiplier would exceed your wallet cap. "
+                f"Multiplier has been adjusted to {multiplier:.2f} to fit your cap."
+            )
+
     new_wallet = data["wallet"] - amount
     set_user_balance(user_id, new_wallet, data["bank"])
 
     base_duration = 0
     extra_multiplier = multiplier - 1.0
-    extra_duration = (extra_multiplier / 0.1) * 600  # 5 minutes = 300 seconds per 0.1x
+    extra_duration = (extra_multiplier / 0.1) * 600  # 10 minutes per 0.1x
     total_duration = base_duration + extra_duration
 
     start_time = time.time()
@@ -2170,7 +2220,7 @@ async def invest(ctx, amount: int, multiplier: float = 1.0):
     }, User.id == user_id)
 
     await ctx.send(
-        f"You invested ${amount:,} with a {multiplier:.1f}x multiplier. "
+        f"You invested ${amount:,} with a {multiplier:.2f}x multiplier. "
         f"Duration is {int(total_duration // 60)} minutes and {int(total_duration % 60)} seconds. "
         f"You now have ${new_wallet:,} in your wallet."
     )
@@ -2253,6 +2303,7 @@ async def deposit(ctx, amount: int):
     if is_user_silenced(user_id):
         return await ctx.send("You're silenced and can't use money commands right now.")
     data = get_user_balance(user_id)
+    prestige_multiplier, wallet_cap, bank_cap = get_prestige_bonuses(user_id)
 
     if amount <= 0:
         await ctx.send("Please enter a positive amount to deposit.")
@@ -2263,6 +2314,7 @@ async def deposit(ctx, amount: int):
 
     data["wallet"] -= amount
     data["bank"] += amount
+    data["bank"] = min(data["bank"], bank_cap)  # Cap bank
     set_user_balance(user_id, data["wallet"], data["bank"])
 
     await ctx.send(f"Deposited ${amount:,} into your bank account.")
@@ -2273,6 +2325,7 @@ async def withdraw(ctx, amount: int):
     if is_user_silenced(user_id):
         return await ctx.send("You're silenced and can't use money commands right now.")
     data = get_user_balance(user_id)
+    prestige_multiplier, wallet_cap, bank_cap = get_prestige_bonuses(user_id)
 
     if amount <= 0:
         await ctx.send("Please enter a positive amount to withdraw.")
@@ -2283,6 +2336,7 @@ async def withdraw(ctx, amount: int):
 
     data["bank"] -= amount
     data["wallet"] += amount
+    data["wallet"] = min(data["wallet"], wallet_cap)  # Cap wallet
     set_user_balance(user_id, data["wallet"], data["bank"])
 
     await ctx.send(f"Withdrew ${amount:,} from your bank account.")
@@ -2767,11 +2821,13 @@ role_nicknames = {
 }
 # "𝔘͢𝖓𝖇ͦ𝖑𝖊𝖘𝖘", "⫷⛓𖤐⛓⫸", "†𝕾𝖕𝖎𝖙†", "⛧𝖒𝖎𝖑𝖐⛧", "✠✟✡☩", "ᴛʜᴇ ᴄʀᴏ𝕨", "𝖋𝖆𝖙𝖊𝖑𝖊𝖘𝖘", "𝖚𝖙𝖍𓂀"
 def to_roman(n):
-    numerals = {
-        1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"
-    }
+    numerals = [
+        (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"),
+        (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
+        (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")
+    ]
     result = ""
-    for value, numeral in sorted(numerals.items(), reverse=True):
+    for value, numeral in numerals:
         while n >= value:
             result += numeral
             n -= value
@@ -2792,6 +2848,84 @@ async def change_nicknames():
                 print(f"Can't change nickname for {member}")
             except Exception as e:
                 print(f"Error changing nickname: {e}")
+
+class DownloadTypeView(View):
+    def __init__(self, url, user):
+        super().__init__(timeout=60)
+        self.url = url
+        self.user = user
+
+    @discord.ui.button(label="Audio", style=discord.ButtonStyle.primary)
+    async def audio_button(self, interaction: discord.Interaction, button: Button):
+        if interaction.user != self.user:
+            return await interaction.response.send_message("This isn't your prompt!", ephemeral=True)
+        await interaction.response.edit_message(content="Downloading audio...", view=None)
+        await download_media(interaction, self.url, mode="audio")
+
+    @discord.ui.button(label="Video", style=discord.ButtonStyle.success)
+    async def video_button(self, interaction: discord.Interaction, button: Button):
+        if interaction.user != self.user:
+            return await interaction.response.send_message("This isn't your prompt!", ephemeral=True)
+        await interaction.response.edit_message(content="Downloading video...", view=None)
+        await download_media(interaction, self.url, mode="video")
+
+async def download_media(interaction, url, mode):
+    ydl_opts = {
+        'quiet': True,
+        'noplaylist': True,
+        'outtmpl': '%(title)s.%(ext)s',
+    }
+
+    if mode == "audio":
+        ydl_opts.update({
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }]
+        })
+    else:
+        ydl_opts.update({
+            'format': 'mp4[filesize<8M]/mp4[height<=480]/mp4/best',
+            'merge_output_format': 'mp4',
+        })
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            if mode == "audio":
+                filename = os.path.splitext(filename)[0] + ".mp3"
+
+        size_mb = os.path.getsize(filename) / (1024 * 1024)
+
+        if size_mb > 8:
+            await interaction.followup.send(
+                f"The file is too large to upload ({size_mb:.2f} MB). Here's a direct link instead:\n{info.get('webpage_url', url)}"
+            )
+        else:
+            await interaction.followup.send(
+                f"Here's your downloaded {mode} from the URL:",
+                file=discord.File(filename)
+            )
+
+        os.remove(filename)
+
+    except Exception as e:
+        await interaction.followup.send(f"Failed to download {mode}: `{e}`")
+
+
+@bot.command()
+async def dlmedia(ctx, url: str):
+    try:
+        await ctx.author.send(
+            f"How would you like to download the media from this URL?\n{url}",
+            view=DownloadTypeView(url, ctx.author)
+        )
+    except discord.Forbidden:
+        await ctx.send("I can't DM you! Please allow DMs from server members.")
+
 
 @bot.command()
 async def prestige(ctx):
@@ -2857,7 +2991,6 @@ async def prestige(ctx):
             self.stop()
 
     async def perform_prestige(interaction):
-
         set_user_balance(user_id, 100, 100)
 
         shop_roles = [v["role_name"] for v in shop_items.values()]
@@ -2872,11 +3005,23 @@ async def prestige(ctx):
 
         roman_level = to_roman(next_level)
         role_name = f"Prestige {roman_level}"
-        prestige_role = discord.utils.get(ctx.guild.roles, name=role_name)
-        if not prestige_role:
-            prestige_role = await ctx.guild.create_role(name=role_name, reason="Prestige upgrade")
 
-        await ctx.author.add_roles(prestige_role)
+        # Award prestige role in all mutual guilds
+        for guild in bot.guilds:
+            member = guild.get_member(ctx.author.id)
+            if not member:
+                continue
+            prestige_role = discord.utils.get(guild.roles, name=role_name)
+            if not prestige_role:
+                try:
+                    prestige_role = await guild.create_role(name=role_name, reason="Prestige upgrade")
+                except Exception:
+                    continue  # skip if can't create
+            if prestige_role not in member.roles:
+                try:
+                    await member.add_roles(prestige_role)
+                except Exception:
+                    pass
 
         if prestige_entry:
             prestige_table.update({"level": next_level}, QueryObj.user_id == user_id)
@@ -3139,10 +3284,10 @@ async def hex(ctx, member: discord.Member = None):
     time_left = f"{minutes}m {seconds}s"
 
     curse_descriptions = {
-        "luck": "↓ Luck by 20%",
+        "luck": "Reduced luck by 20%",
         "drain": "Drains 2% of wallet & bank per minute",
         "silence": "Cannot use money commands",
-        "rotting": "↓ Multiplier & luck over time (up to -20%)"
+        "rotting": "Multiplier & luck dwindle over time (up to -20%)"
     }
 
     description = curse_descriptions.get(curse_type, "Unknown effect")
@@ -3283,5 +3428,21 @@ async def on_member_remove(member):
         channel = member.guild.system_channel or next((c for c in member.guild.text_channels if c.permissions_for(member.guild.me).send_messages), None)
     if message and channel:
         await channel.send(message.format(user=member.mention, server=member.guild.name))
+
+@bot.command()
+async def prestigeinfo(ctx):
+    embed = discord.Embed(
+        title="Prestige Information",
+        description=(
+            "Prestiging allows you to reset your money and roles for a new start, but with new perks.\n\n"
+            "You can prestige once you reach a certain amount of money - 50 trillion.\n\n"
+            "Each prestige level increases your money multiplier from things like .slots and .gamble, along with letting you hold more money at once.\n\n"
+            "Use `.prestige` to start the process. It won't immediately prestige you, but will ask for confirmation to avoid accidents, since everything will wipe.\n\n"
+        ),
+        color=discord.Color.gold()
+    )
+    embed.set_footer(text="Prestige wisely!")
+    embed.set_thumbnail(url="https://cdn.discordapp.com/emojis/1392039603963166731.gif?size=48&animated=true&name=voidcrown")
+    await ctx.send(embed=embed)
 
 bot.run(BOT1)

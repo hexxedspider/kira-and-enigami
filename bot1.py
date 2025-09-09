@@ -447,7 +447,30 @@ async def help(ctx):
     embed14.add_field(name=".gift <@person> <@role>", value="Lets you send a role to another user.", inline=True)
     embed14.add_field(name=".curseinfo", value="View information about all current curses.", inline=True)
     embed14.add_field(name=".dlmedia <url>", value="Download media from a URL.", inline=True)
-    view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6, embed7, embed8, embed9, embed10, embed11, embed12, embed13, embed14])
+    embed15 = discord.Embed(
+        title="Help Page 15",
+        description="New Commands",
+        color=discord.Color.blurple()
+    )
+    embed15.set_footer(text=f"This menu disables in 60 seconds.")
+    embed15.add_field(name=".translate <lang> <text>", value="Translate text to a language.", inline=True)
+    embed15.add_field(name=".poll <question> <options>", value="Create a poll with options.", inline=True)
+    embed15.add_field(name=".auction <item> <start_bid> <duration>", value="Start an auction.", inline=True)
+    embed15.add_field(name=".bid <amount>", value="Bid on the current auction.", inline=True)
+    embed15.add_field(name=".serverstats", value="Show server statistics.", inline=True)
+    embed15.add_field(name=".customcommand <name> <response>", value="Create a custom command (admin only).", inline=True)
+    embed15.add_field(name=".afk <reason>", value="Set yourself as AFK.", inline=True)
+    embed15.add_field(name=".quote <@person> <message>", value="Add or view quotes.", inline=True)
+    embed15.add_field(name=".ascii <text>", value="Convert text to ASCII art.", inline=True)
+    embed15.add_field(name=".pet <action>", value="Virtual pet system.", inline=True)
+    embed15.add_field(name=".reminder <time> <message>", value="Set timed reminders.", inline=True)
+    embed15.add_field(name=".pollresults <message_id>", value="View poll results.", inline=True)
+    embed15.add_field(name=".level <@person>", value="Check XP and level.", inline=True)
+    embed15.add_field(name=".voicekick <@person>", value="Kick from voice (admin).", inline=True)
+    embed15.add_field(name=".slowmode <seconds>", value="Set channel slowmode (admin).", inline=True)
+    embed15.add_field(name=".nickname <@person> <nick>", value="Change nickname (admin).", inline=True)
+    embed15.add_field(name=".purge <amount> [@person]", value="Delete messages (admin).", inline=True)
+    view = HelpView([embed1, embed2, embed3, embed4, embed5, embed6, embed7, embed8, embed9, embed10, embed11, embed12, embed13, embed14, embed15])
     await ctx.send(embed=embed1, view=view)
 
 @bot.command()
@@ -821,7 +844,7 @@ async def rps(ctx):
         await interaction.response.edit_message(
             content=(
                 f"You chose **{user_choice}**.\nI chose **{bot_choice}**.\n\n"
-                f"{outcome}\n\n{coin_msg}\n\n📊 **Your RPS Stats:** {stats_msg}"
+                f"{outcome}\n\n{coin_msg}\n\n**Your RPS Stats:** {stats_msg}"
             ),
             view=None
         )
@@ -1326,7 +1349,34 @@ async def adminpanel(ctx):
         await ctx.send("You must be an administrator to use this command in this channel.")
         return
 
-    admin_commands = "**Admin Commands:**\n- `.kick @user [reason]` - Kick a user from the server.\n- `.ban @user [reason]` - Ban a user from the server.\n- `.unban username` - Unban a user by their name and discriminator.\n- `.mute @user [reason]` - Mute a user by adding the Muted role.\n- `.unmute @user` - Remove the Muted role from a user.\n- `.clear <number>` - Bulk delete messages in the current channel.\n- `.giverole @user role_name` - Give a role to a user.\n- `.setbal @user [amount]` - Give money to a user, only used for testing purposes. Only works in servers, NOT DMs.\n- `.clear [amount]` - Clears bot's messages. Defaults to 5.\n- `.setwelcome / .setgoodbye [message]` - Sets the welcome or goodbye message for new members. Use {user} to have the user be named, {server} for the server name.\n- `.reloadshop` - Reloads the shop items from the JSON file.\n- `.createshoproles` - Creates all shop roles if they don't exist.\n- `.verify <#channel> <message>` - Sends a embed message to the specified channel. '[MEMBER]' role needed, exactly that format and capitalization, with the brackets and all.\n- `.setwgchannel <#channel>` - Sets what channel the welcome and goodbye messages should be sent to."
+    admin_commands = "**Admin Commands:**\n" \
+    "**Moderation:**\n" \
+    "- `.kick @user [reason]` - Kick a user from the server.\n" \
+    "- `.ban @user [reason]` - Ban a user from the server.\n" \
+    "- `.unban username` - Unban a user by their name and discriminator.\n" \
+    "- `.mute @user [reason]` - Mute a user by adding the Muted role.\n" \
+    "- `.unmute @user` - Remove the Muted role from a user.\n" \
+    "- `.voicekick @user` - Kick a user from voice channel.\n" \
+    "- `.nickname @user <nick>` - Change a user's nickname.\n" \
+    "- `.giverole @user role_name` - Give a role to a user.\n\n" \
+    "**Channel Management:**\n" \
+    "- `.clear <number>` - Bulk delete messages in the current channel.\n" \
+    "- `.purge <amount> [@user]` - Delete messages from a specific user or all.\n" \
+    "- `.slowmode <seconds>` - Set slowmode in current channel (0-21600).\n" \
+    "- `.cleardm <amount>` - Clears bot's messages in DMs.\n\n" \
+    "**Server Configuration:**\n" \
+    "- `.setwelcome <message>` - Set welcome message for new members.\n" \
+    "- `.setgoodbye <message>` - Set goodbye message for leaving members.\n" \
+    "- `.setwgchannel <#channel>` - Set channel for welcome/goodbye messages.\n" \
+    "- `.verify <#channel> <message>` - Send verification embed.\n" \
+    "- `.reloadshop` - Reload shop items from JSON file.\n" \
+    "- `.createshoproles` - Create all shop roles if they don't exist.\n" \
+    "- `.customcommand <name> <response>` - Create custom commands.\n\n" \
+    "**Economy Management:**\n" \
+    "- `.setbal @user <amount>` - Set a user's wallet balance.\n" \
+    "- `.cinv` - Clear your investment (admin only).\n\n" \
+    "**Bot Owner Only:**\n" \
+    "- `.setevent <event_key>` - Set active event configuration."
 
     await ctx.send(admin_commands)
     await ctx.message.delete()
@@ -2493,7 +2543,7 @@ async def marriages(ctx):
         user2 = ctx.guild.get_member(int(entry['spouse_id']))
         name1 = user1.display_name if user1 else f"<different server>"
         name2 = user2.display_name if user2 else f"<different>"
-        embed.add_field(name=f"{name1} 💞 {name2}", value="\u200b", inline=False)
+        embed.add_field(name=f"{name1} loves {name2}", value="\u200b", inline=False)
 
     await ctx.send(embed=embed)
 
@@ -2516,7 +2566,7 @@ async def propose(ctx, user: discord.Member):
         return await ctx.send(f"{user.mention} already has a pending proposal.")
 
     pending_proposals[user.id] = ctx.author.id
-    await ctx.send(f"💍 {ctx.author.mention} has proposed to {user.mention}! Type `.acceptproposal` or `.rejectproposal`.")
+    await ctx.send(f"{ctx.author.mention} has proposed to {user.mention}! Type `.acceptproposal` or `.rejectproposal`.")
 
 @bot.command()
 async def acceptproposal(ctx):
@@ -3068,7 +3118,7 @@ async def leaderboard(ctx):
     top3 = leaderboard[:3]
 
     embed = discord.Embed(
-        title="🏆 Top 3 Richest Users",
+        title="Top 3 Richest Users",
         description="Based on wallet + bank",
         color=discord.Color.gold()
     )
@@ -3094,7 +3144,7 @@ async def leaderboard(ctx):
         prestige_level = prestige_entry["level"] if prestige_entry else 0
 
         embed.add_field(
-            name=f"{['🥇','🥈','🥉'][idx-1]} {user.name}",
+            name=f"{['1st','2nd','3rd'][idx-1]} {user.name}",
             value=(
                 f"**Total Money:** ${total:,}\n"
                 f"**Top Roles:** {top_roles}\n"
@@ -3152,7 +3202,7 @@ async def gift(ctx, member: discord.Member, *, item_name: str):
     else:
         inventory_table.insert({"user_id": receiver_id, "items": [item_name]})
 
-    await ctx.send(f"{ctx.author.mention} has gifted **{item_name}** to {member.mention} 🎁")
+    await ctx.send(f"{ctx.author.mention} has gifted **{item_name}** to {member.mention}")
 
 DRAIN_DURATION = 30 
 DRAIN_PERCENTAGE = 0.02  # 2%
@@ -3444,5 +3494,385 @@ async def prestigeinfo(ctx):
     embed.set_footer(text="Prestige wisely!")
     embed.set_thumbnail(url="https://cdn.discordapp.com/emojis/1392039603963166731.gif?size=48&animated=true&name=voidcrown")
     await ctx.send(embed=embed)
+
+@bot.command()
+async def translate(ctx, lang: str, *, text: str):
+    """Translate text to a language (e.g., .translate es hello)."""
+    from googletrans import Translator
+    translator = Translator()
+    try:
+        translated = translator.translate(text, dest=lang)
+        await ctx.send(f"**Original:** {text}\n**Translated ({lang}):** {translated.text}")
+    except Exception as e:
+        await ctx.send(f"Translation failed: {e}")
+
+@bot.command()
+async def poll(ctx, *, question: str):
+    """Create a poll (e.g., .poll Should we add more games? yes no)."""
+    options = question.split()
+    if len(options) < 3:
+        return await ctx.send("Usage: .poll <question> <option1> <option2> ...")
+
+    question = options[0]
+    options = options[1:]
+    if len(options) > 10:
+        options = options[:10]
+
+    embed = discord.Embed(title=f"Poll: {question}", color=discord.Color.green())
+    reactions = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+    for i, opt in enumerate(options):
+        embed.add_field(name=f"{reactions[i]} {opt}", value="\u200b", inline=False)
+
+    msg = await ctx.send(embed=embed)
+    for i in range(len(options)):
+        await msg.add_reaction(reactions[i])
+
+@bot.command()
+async def auction(ctx, item: str, start_bid: int, duration: int):
+    """Start an auction (e.g., .auction 'Rare Sword' 100 300)."""
+    if duration > 3600:
+        return await ctx.send("Auction duration can't exceed 1 hour.")
+
+    embed = discord.Embed(title=f"Auction: {item}", description=f"Starting bid: ${start_bid}\nEnds in {duration} seconds.", color=discord.Color.orange())
+    msg = await ctx.send(embed=embed)
+    await msg.add_reaction("💰")
+
+    bot.auctions = getattr(bot, 'auctions', {})
+    bot.auctions[msg.id] = {
+        "item": item,
+        "current_bid": start_bid,
+        "bidder": None,
+        "end_time": time.time() + duration,
+        "channel": ctx.channel.id
+    }
+
+    await asyncio.sleep(duration)
+    auction = bot.auctions.get(msg.id)
+    if auction:
+        if auction["bidder"]:
+            await ctx.send(f"Auction ended! {auction['bidder'].mention} won {item} for ${auction['current_bid']}.")
+        else:
+            await ctx.send(f"Auction for {item} ended with no bids.")
+
+@bot.command()
+async def bid(ctx, amount: int):
+    """Bid on the current auction."""
+    auctions = getattr(bot, 'auctions', {})
+    active_auction = None
+    for msg_id, auction in auctions.items():
+        if auction["channel"] == ctx.channel.id and time.time() < auction["end_time"]:
+            active_auction = auction
+            break
+
+    if not active_auction:
+        return await ctx.send("No active auction in this channel.")
+
+    if amount <= active_auction["current_bid"]:
+        return await ctx.send(f"Bid must be higher than ${active_auction['current_bid']}.")
+
+    user_balance = get_user_balance(str(ctx.author.id))["wallet"]
+    if amount > user_balance:
+        return await ctx.send("You don't have enough money.")
+
+    active_auction["current_bid"] = amount
+    active_auction["bidder"] = ctx.author
+    await ctx.send(f"{ctx.author.mention} bids ${amount}!")
+
+@bot.command()
+async def serverstats(ctx):
+    """Show server statistics."""
+    guild = ctx.guild
+    embed = discord.Embed(title=f"{guild.name} Stats", color=discord.Color.teal())
+    embed.add_field(name="Members", value=guild.member_count, inline=True)
+    embed.add_field(name="Channels", value=len(guild.channels), inline=True)
+    embed.add_field(name="Roles", value=len(guild.roles), inline=True)
+    embed.add_field(name="Emojis", value=len(guild.emojis), inline=True)
+    embed.add_field(name="Created", value=guild.created_at.strftime("%Y-%m-%d"), inline=True)
+    embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def customcommand(ctx, name: str, *, response: str):
+    """Create a custom command (admin only)."""
+    if not ctx.author.guild_permissions.administrator:
+        return await ctx.send("Admin only.")
+
+    custom_cmds = main_db.table("custom_commands")
+    custom_cmds.upsert({"name": name, "response": response}, Query().name == name)
+    await ctx.send(f"Custom command `{name}` created.")
+
+@bot.command()
+async def afk(ctx, *, reason: str = "AFK"):
+    """Set yourself as AFK with an optional reason."""
+    user_id = str(ctx.author.id)
+    afk_table = main_db.table("afk")
+    afk_table.upsert({"user_id": user_id, "reason": reason, "timestamp": time.time()}, Query().user_id == user_id)
+    await ctx.send(f"{ctx.author.mention} is now AFK: {reason}")
+
+@bot.command()
+async def quote(ctx, member: discord.Member = None, *, message: str = None):
+    """Quote a message or add a quote for someone."""
+    if message:
+        # Add a quote
+        quote_table = main_db.table("quotes")
+        quote_id = len(quote_table.all()) + 1
+        quote_table.insert({
+            "id": quote_id,
+            "author": str(member.id) if member else str(ctx.author.id),
+            "quote": message,
+            "added_by": str(ctx.author.id),
+            "timestamp": time.time()
+        })
+        await ctx.send(f"Quote #{quote_id} added!")
+    else:
+        # Get a random quote
+        quote_table = main_db.table("quotes")
+        quotes = quote_table.all()
+        if not quotes:
+            return await ctx.send("No quotes found.")
+        random_quote = random.choice(quotes)
+        author = await bot.fetch_user(int(random_quote["author"]))
+        embed = discord.Embed(
+            title=f"Quote #{random_quote['id']}",
+            description=random_quote["quote"],
+            color=discord.Color.blue()
+        )
+        embed.set_footer(text=f"By {author.name}")
+        await ctx.send(embed=embed)
+
+@bot.command()
+async def ascii(ctx, *, text: str):
+    """Convert text to ASCII art."""
+    try:
+        from art import text2art
+        ascii_art = text2art(text[:10])  # Limit to 10 chars
+        await ctx.send(f"```\n{ascii_art}\n```")
+    except ImportError:
+        await ctx.send("ASCII art library not installed. Install with `pip install art`")
+
+@bot.command()
+async def pet(ctx, action: str = "info"):
+    """Virtual pet system."""
+    user_id = str(ctx.author.id)
+    pet_table = main_db.table("pets")
+
+    pet_data = pet_table.get(Query().user_id == user_id)
+    if not pet_data:
+        if action == "adopt":
+            pet_table.insert({
+                "user_id": user_id,
+                "name": "Buddy",
+                "hunger": 100,
+                "happiness": 100,
+                "last_fed": time.time(),
+                "last_played": time.time()
+            })
+            await ctx.send("You adopted a pet named Buddy! 🐶")
+        else:
+            await ctx.send("You don't have a pet! Use `.pet adopt` to get one.")
+        return
+
+    if action == "feed":
+        pet_data["hunger"] = min(100, pet_data["hunger"] + 20)
+        pet_data["last_fed"] = time.time()
+        pet_table.update(pet_data, Query().user_id == user_id)
+        await ctx.send("You fed your pet! 🍖")
+    elif action == "play":
+        pet_data["happiness"] = min(100, pet_data["happiness"] + 15)
+        pet_data["last_played"] = time.time()
+        pet_table.update(pet_data, Query().user_id == user_id)
+        await ctx.send("You played with your pet! 🎾")
+    elif action == "info":
+        embed = discord.Embed(title=f"{pet_data['name']}'s Stats", color=discord.Color.green())
+        embed.add_field(name="Hunger", value=f"{pet_data['hunger']}/100", inline=True)
+        embed.add_field(name="Happiness", value=f"{pet_data['happiness']}/100", inline=True)
+        embed.add_field(name="Status", value="Happy! 😊" if pet_data["happiness"] > 50 else "Sad 😢", inline=True)
+        await ctx.send(embed=embed)
+
+@bot.command()
+async def reminder(ctx, time_str: str, *, reminder: str):
+    """Set a reminder (e.g., .reminder 1h Check the oven)."""
+    import re
+    match = re.match(r"(\d+)([smhd])", time_str)
+    if not match:
+        return await ctx.send("Invalid time format. Use number + s/m/h/d (e.g., 30m, 2h)")
+
+    amount, unit = match.groups()
+    amount = int(amount)
+    multiplier = {"s": 1, "m": 60, "h": 3600, "d": 86400}[unit]
+    delay = amount * multiplier
+
+    if delay > 604800:  # 1 week max
+        return await ctx.send("Reminder can't be more than 1 week away.")
+
+    await ctx.send(f"Reminder set for {time_str} from now.")
+    await asyncio.sleep(delay)
+    try:
+        await ctx.author.send(f"Reminder: {reminder}")
+    except discord.Forbidden:
+        pass
+
+@bot.command()
+async def pollresults(ctx, message_id: int):
+    """Get results of a poll by message ID."""
+    try:
+        message = await ctx.channel.fetch_message(message_id)
+        reactions = message.reactions
+        embed = discord.Embed(title="Poll Results", color=discord.Color.blue())
+        for reaction in reactions:
+            embed.add_field(name=str(reaction.emoji), value=f"{reaction.count - 1} votes", inline=True)
+        await ctx.send(embed=embed)
+    except:
+        await ctx.send("Could not find that message or it's not a poll.")
+
+@bot.command()
+async def level(ctx, member: discord.Member = None):
+    """Check your or someone else's level."""
+    member = member or ctx.author
+    user_id = str(member.id)
+    level_table = main_db.table("levels")
+
+    level_data = level_table.get(Query().user_id == user_id)
+    if not level_data:
+        level_data = {"user_id": user_id, "xp": 0, "level": 1}
+
+    xp = level_data.get("xp", 0)
+    level = level_data.get("level", 1)
+    xp_needed = level * 100
+
+    embed = discord.Embed(title=f"{member.name}'s Level", color=discord.Color.purple())
+    embed.add_field(name="Level", value=level, inline=True)
+    embed.add_field(name="XP", value=f"{xp}/{xp_needed}", inline=True)
+    embed.add_field(name="Progress", value=f"{(xp/xp_needed)*100:.1f}%", inline=True)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def voicekick(ctx, member: discord.Member):
+    """Kick someone from voice channel (admin only)."""
+    if not ctx.author.guild_permissions.move_members:
+        return await ctx.send("You need move members permission.")
+
+    if not member.voice:
+        return await ctx.send("That member is not in a voice channel.")
+
+    await member.move_to(None)
+    await ctx.send(f"{member.mention} has been kicked from voice.")
+
+@bot.command()
+async def slowmode(ctx, seconds: int):
+    """Set slowmode in current channel (admin only)."""
+    if not ctx.author.guild_permissions.manage_channels:
+        return await ctx.send("You need manage channels permission.")
+
+    if seconds < 0 or seconds > 21600:
+        return await ctx.send("Slowmode must be between 0 and 21600 seconds.")
+
+    await ctx.channel.edit(slowmode_delay=seconds)
+    await ctx.send(f"Slowmode set to {seconds} seconds.")
+
+@bot.command()
+async def nickname(ctx, member: discord.Member, *, nick: str):
+    """Change someone's nickname (admin only)."""
+    if not ctx.author.guild_permissions.manage_nicknames:
+        return await ctx.send("You need manage nicknames permission.")
+
+    try:
+        await member.edit(nick=nick)
+        await ctx.send(f"Changed {member.name}'s nickname to {nick}")
+    except discord.Forbidden:
+        await ctx.send("I can't change that user's nickname.")
+
+@bot.command()
+async def purge(ctx, amount: int, member: discord.Member = None):
+    """Delete messages from a specific user or all (admin only)."""
+    if not ctx.author.guild_permissions.manage_messages:
+        return await ctx.send("You need manage messages permission.")
+
+    def check(message):
+        if member:
+            return message.author == member
+        return True
+
+    deleted = await ctx.channel.purge(limit=amount, check=check)
+    await ctx.send(f"Deleted {len(deleted)} messages.", delete_after=5)
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    # XP system: 2 XP per message
+    user_id = str(message.author.id)
+    level_table = main_db.table("levels")
+
+    level_data = level_table.get(Query().user_id == user_id)
+    if not level_data:
+        level_data = {"user_id": user_id, "xp": 0, "level": 1}
+        level_table.insert(level_data)
+
+    # Add 2 XP for each message
+    level_data["xp"] += 2
+
+    # Check for level up
+    current_level = level_data["level"]
+    xp_needed = current_level * 100
+
+    if level_data["xp"] >= xp_needed:
+        level_data["level"] += 1
+        level_data["xp"] = 0  # Reset XP or keep overflow
+        await message.channel.send(f"{message.author.mention} leveled up to level {level_data['level']}!")
+
+    level_table.update(level_data, Query().user_id == user_id)
+
+    # Check for custom commands
+    custom_cmds = main_db.table("custom_commands")
+    cmd = custom_cmds.get(Query().name == message.content.lower())
+    if cmd:
+        await message.channel.send(cmd["response"])
+        return
+
+    await bot.process_commands(message)
+
+# Voice XP tracking
+voice_join_times = {}  # {user_id: join_time}
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    user_id = str(member.id)
+    level_table = main_db.table("levels")
+
+    # User joined a voice channel
+    if before.channel is None and after.channel is not None:
+        voice_join_times[user_id] = time.time()
+
+    # User left a voice channel
+    elif before.channel is not None and after.channel is None:
+        if user_id in voice_join_times:
+            join_time = voice_join_times[user_id]
+            time_spent = time.time() - join_time
+            minutes_spent = time_spent / 60
+
+            # Award 1 XP per minute
+            xp_gained = int(minutes_spent * 1)
+            if xp_gained > 0:
+                level_data = level_table.get(Query().user_id == user_id)
+                if not level_data:
+                    level_data = {"user_id": user_id, "xp": 0, "level": 1}
+                    level_table.insert(level_data)
+
+                level_data["xp"] += xp_gained
+
+                # Check for level up
+                current_level = level_data["level"]
+                xp_needed = current_level * 100
+
+                if level_data["xp"] >= xp_needed:
+                    level_data["level"] += 1
+                    level_data["xp"] = 0  # Reset XP
+                    # Don't send level up message in voice - too spammy
+
+                level_table.update(level_data, Query().user_id == user_id)
+
+            del voice_join_times[user_id]
 
 bot.run(BOT1)

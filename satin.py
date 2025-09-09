@@ -4,7 +4,6 @@ from discord import app_commands
 
 import os
 import json
-import random
 from dotenv import load_dotenv
 import asyncio
 
@@ -19,29 +18,24 @@ intents.message_content = True
 intents.guilds = True
 intents.voice_states = True
 
-
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# Preset custom statuses
 CUSTOM_STATUSES = [
-	(discord.ActivityType.listening, "BadRadio.nz"),
-	(discord.ActivityType.custom, "go support BadRadio, theyre what makes this possible!"),
-	(discord.ActivityType.custom, "use /radio"),
-	(discord.ActivityType.custom, "ponk"),
-	(discord.ActivityType.custom, "phonk my goat"),
-	(discord.ActivityType.custom, "ignoring 99.9% of requests"),
-	(discord.ActivityType.listening, "SOUDIERE, DJ Yung VAmp, NxxxxxS, Dj Smokey, Roland Jones."),
+	discord.Activity(type=discord.ActivityType.listening, name="BadRadio.nz"),
+	discord.CustomActivity(name="go support BadRadio, theyre what makes this possible!"),
+	discord.CustomActivity(name="use /radio"),
+	discord.CustomActivity(name="ponk"),
+	discord.CustomActivity(name="phonk my goat"),
+	discord.CustomActivity(name="ignoring 99.9% of requests"),
+	discord.Activity(type=discord.ActivityType.listening, name="SOUDIERE, DJ Yung VAmp, NxxxxxS, Dj Smokey, Roland Jones."),
 ]
-
-async def set_random_status():
-	activity_type, name = random.choice(CUSTOM_STATUSES)
-	await bot.change_presence(activity=discord.Activity(type=activity_type, name=name))
 
 async def status_cycler():
 	await bot.wait_until_ready()
-	while True:
-		await set_random_status()
-		await asyncio.sleep(30)
+	while not bot.is_closed():
+		for status in CUSTOM_STATUSES:
+			await bot.change_presence(status=discord.Status.idle, activity=status)
+			await asyncio.sleep(30)
 
 def save_channel(guild_id, channel_id):
 	try:
@@ -168,7 +162,8 @@ async def on_ready():
 		print(f"Failed to sync commands: {e}")
 	bot.loop.create_task(status_cycler())
 
-# Switch to 'Listening to BadRadio.nz' when joining a voice channel, revert to random when leaving all
+
+# Switch to 'Listening to BadRadio.nz' when joining a voice channel, revert to cycling when leaving all
 @bot.event
 async def on_voice_state_update(member, before, after):
 	if member.id != bot.user.id:
@@ -178,6 +173,7 @@ async def on_voice_state_update(member, before, after):
 		await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="BadRadio.nz"))
 	# Left all voice channels
 	elif before.channel and not after.channel:
-		await set_random_status()
+		# Restart the status cycler
+		bot.loop.create_task(status_cycler())
 
 bot.run(TOKEN)
